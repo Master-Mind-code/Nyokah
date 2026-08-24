@@ -5,12 +5,16 @@ import { Footer } from './components/common/Footer';
 import { MobileBottomNav } from './components/common/MobileBottomNav';
 import { Toast } from './components/common/Toast';
 import { VehicleDetailModal } from './components/client/VehicleDetailModal';
+import { AuthModal } from './components/auth/AuthModal';
+import { WhatsAppSimulatorModal } from './components/common/WhatsAppSimulatorModal';
+import { WhatsAppFloatingWidget } from './components/common/WhatsAppFloatingWidget';
 
 // Client Views
 import { ClientHome } from './components/client/ClientHome';
 import { ClientCatalog } from './components/client/ClientCatalog';
 import { BookingTunnel } from './components/client/BookingTunnel';
 import { CompanyPortal } from './components/client/CompanyPortal';
+import { UserProfileView } from './components/client/UserProfileView';
 
 // Admin Views
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -45,6 +49,15 @@ const MainAppContent: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-[#F9F9FD] text-[#1A1C1F]">
       <Toast />
 
+      {/* Global Authentication Modal (Login / Individual Register / Company B2B Register) */}
+      <AuthModal />
+
+      {/* Global WhatsApp Live Simulator Modal */}
+      <WhatsAppSimulatorModal />
+
+      {/* Global WhatsApp Quick Floating Trigger Button */}
+      <WhatsAppFloatingWidget />
+
       {/* Global Vehicle Detail Modal */}
       <VehicleDetailModal
         vehicle={selectedVehicleForModal}
@@ -63,11 +76,14 @@ const MainAppContent: React.FC = () => {
             {clientTab === 'catalog' && (
               <ClientCatalog onOpenVehicleModal={handleOpenVehicleModal} />
             )}
-            {clientTab === 'booking' && (
+            {(clientTab === 'booking' || clientTab === 'booking-flow') && (
               <BookingTunnel />
             )}
             {clientTab === 'company-space' && (
               <CompanyPortal />
+            )}
+            {clientTab === 'user-profile' && (
+              <UserProfileView />
             )}
           </main>
           <Footer />

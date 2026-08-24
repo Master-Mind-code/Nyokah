@@ -30,7 +30,9 @@ export const AdminReservations: React.FC = () => {
     companies, 
     assignDriverAndVehicle, 
     updateBookingStatus, 
-    showToast 
+    showToast,
+    openWhatsAppSimulator,
+    whatsAppNotifications 
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,14 +60,23 @@ export const AdminReservations: React.FC = () => {
 
   const handleOpenAssignModal = (b: Booking) => {
     setModalBooking(b);
-    setSelectedVehicleId(b.vehicleId);
-    setSelectedDriverId(b.assignedDriverId || (drivers.find(d => d.status === 'Disponible')?.id || drivers[0].id));
+    setSelectedVehicleId(b.vehicleId || (vehicles[0] ? vehicles[0].id : ''));
+    const defaultDriverId = b.assignedDriverId || (drivers.find(d => d.status === 'Disponible')?.id || (drivers[0] ? drivers[0].id : ''));
+    setSelectedDriverId(defaultDriverId);
     setIsAssignModalOpen(true);
   };
 
   const handleSaveAssignment = () => {
-    if (!modalBooking || !selectedDriverId || !selectedVehicleId) return;
-    assignDriverAndVehicle(modalBooking.id, selectedDriverId, selectedVehicleId);
+    if (!modalBooking) return;
+    const finalDriverId = selectedDriverId || (drivers.find(d => d.status === 'Disponible')?.id || (drivers[0] ? drivers[0].id : ''));
+    const finalVehicleId = selectedVehicleId || modalBooking.vehicleId || (vehicles[0] ? vehicles[0].id : '');
+
+    if (!finalDriverId || !finalVehicleId) {
+      showToast('Veuillez sélectionner un chauffeur et un véhicule valides.', 'warning');
+      return;
+    }
+
+    assignDriverAndVehicle(modalBooking.id, finalDriverId, finalVehicleId);
     setIsAssignModalOpen(false);
     setModalBooking(null);
   };
@@ -224,6 +235,18 @@ export const AdminReservations: React.FC = () => {
                       </td>
 
                       <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                        {/* WhatsApp preview button */}
+                        <button
+                          onClick={() => {
+                            const matchingNotif = whatsAppNotifications.find((n) => n.bookingId === b.id);
+                            openWhatsAppSimulator(matchingNotif);
+                          }}
+                          className="p-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors inline-block"
+                          title="Voir la notification WhatsApp client"
+                        >
+                          <span className="text-xs">💬</span>
+                        </button>
+
                         <button
                           onClick={() => handleOpenAssignModal(b)}
                           className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs transition-colors"

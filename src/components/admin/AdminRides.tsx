@@ -15,11 +15,10 @@ import {
 } from 'lucide-react';
 
 export const AdminRides: React.FC = () => {
-  const { rides, setRides, drivers, vehicles, showToast } = useApp();
+  const { rides, updateRideStatus, drivers, vehicles, showToast } = useApp();
 
   const handleUpdateRideStatus = (rideId: string, newStatus: RideStatus) => {
-    setRides((prev) => prev.map((r) => r.id === rideId ? { ...r, status: newStatus } : r));
-    showToast(`Course ${rideId} passée au statut : ${newStatus}`, 'success');
+    updateRideStatus(rideId, newStatus);
   };
 
   const handleSendWhatsAppToDriver = (ride: Ride) => {

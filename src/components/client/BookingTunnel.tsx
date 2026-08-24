@@ -35,7 +35,9 @@ export const BookingTunnel: React.FC = () => {
     submitBooking, 
     setClientTab, 
     setRole,
-    showToast 
+    showToast,
+    currentUser,
+    openAuthModal
   } = useApp();
 
   const [currentStep, setCurrentStep] = useState<number>(4); // Default to Step 4 as in Image 3 mockup for presentation, but user can click any step
@@ -383,9 +385,44 @@ export const BookingTunnel: React.FC = () => {
       {/* STEP 3: Coordonnées Client / Société */}
       {currentStep === 3 && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm max-w-2xl mx-auto space-y-6 animate-in fade-in duration-200">
-          <h2 className="text-xl font-bold font-serif text-slate-900 border-b border-slate-100 pb-3">
-            Étape 3 : Coordonnées du Passager & Société
-          </h2>
+          <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+            <h2 className="text-xl font-bold font-serif text-slate-900">
+              Étape 3 : Coordonnées du Passager & Société
+            </h2>
+            {currentUser && (
+              <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full">
+                Connecté : {currentUser.fullName}
+              </span>
+            )}
+          </div>
+
+          {/* Quick Login / Register Prompt if not authenticated */}
+          {!currentUser && (
+            <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+              <div className="space-y-0.5">
+                <p className="font-bold text-amber-900">Déjà client ou Entreprise partenaire ?</p>
+                <p className="text-amber-800">
+                  Connectez-vous pour appliquer automatiquement vos remises négociées et vos coordonnées.
+                </p>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('login')}
+                  className="px-3.5 py-1.5 bg-[#0B132B] text-white rounded-full font-bold hover:bg-[#1A264F] transition-all"
+                >
+                  Se connecter
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('register-company')}
+                  className="px-3.5 py-1.5 border border-[#795900] text-[#795900] rounded-full font-bold hover:bg-amber-100 transition-all"
+                >
+                  Compte B2B
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-4">
             {/* Corporate Switcher inside Step */}

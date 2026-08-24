@@ -1,4 +1,4 @@
-import { Vehicle, Driver, Subcontractor, Company, Booking, AutoPack, Ride, PromoRule } from '../types';
+import { Vehicle, Driver, Subcontractor, Company, Booking, AutoPack, Ride, PromoRule, UserAccount, WhatsAppNotification } from '../types';
 
 export const INITIAL_VEHICLES: Vehicle[] = [
   {
@@ -956,3 +956,238 @@ export const INITIAL_PROMO_RULES: PromoRule[] = [
     active: true
   }
 ];
+
+export const INITIAL_USERS: UserAccount[] = [
+  {
+    id: 'user-01',
+    type: 'individual',
+    fullName: 'Jean-Marc Kouassi',
+    email: 'jm.kouassi@gmail.com',
+    phone: '+225 07 12 34 56 78',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+    createdAt: '2025-11-10',
+    city: 'Abidjan',
+    district: 'Cocody Riviera Golf',
+    savedAddresses: [
+      'Cocody Riviera Golf (Résidence)',
+      'Plateau Immeuble CCIA (Bureau)',
+      'Aéroport Félix-Houphouët-Boigny (FHB)'
+    ],
+    loyaltyPoints: 1250,
+    tier: 'Gold VIP'
+  },
+  {
+    id: 'user-02',
+    type: 'individual',
+    fullName: 'Aïcha Diabaté',
+    email: 'aicha.diabate@yahoo.fr',
+    phone: '+225 05 98 76 54 32',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    createdAt: '2026-01-15',
+    city: 'Abidjan',
+    district: 'Marcory Zone 4',
+    savedAddresses: [
+      'Marcory Zone 4, Rue du 7 Décembre',
+      'Sofitel Abidjan Hôtel Ivoire, Cocody'
+    ],
+    loyaltyPoints: 600,
+    tier: 'Silver'
+  },
+  {
+    id: 'user-03',
+    type: 'company',
+    fullName: 'Aminata Touré',
+    email: 'a.toure@orange.ci',
+    phone: '+225 07 44 55 66 77',
+    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
+    createdAt: '2025-06-01',
+    companyId: 'comp-02',
+    companyName: 'Orange Côte d’Ivoire',
+    companyRole: 'Responsable Flotte & Mobilité Exécutive',
+    tradeRegister: 'CI-ABJ-1996-B-129',
+    billingAddress: 'Siège Orange CI, Riviera Golf, Boulevard François Mitterrand, Abidjan',
+    creditLineApproved: true,
+    creditLimit: 15000000,
+    negotiatedDiscountRate: 20,
+    authorizedBookers: [
+      'Aminata Touré (Resp. Flotte)',
+      'Marie Koné (Assistante DG)',
+      'Cabinet Direction Générale'
+    ]
+  },
+  {
+    id: 'user-04',
+    type: 'company',
+    fullName: 'M. Jean Dupont',
+    email: 'jean.dupont@sifca-ci.com',
+    phone: '+225 07 08 09 10 11',
+    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
+    createdAt: '2025-04-10',
+    companyId: 'comp-01',
+    companyName: 'Groupe SIFCA',
+    companyRole: 'Directeur des Achats & Logistique',
+    tradeRegister: 'CI-ABJ-1964-B-432',
+    billingAddress: 'Boulevard du Havre, Zone Portuaire, Abidjan',
+    creditLineApproved: true,
+    creditLimit: 10000000,
+    negotiatedDiscountRate: 15,
+    authorizedBookers: [
+      'Jean Dupont (Dir. Achats)',
+      'Service Protocole SIFCA'
+    ]
+  },
+  {
+    id: 'user-05',
+    type: 'company',
+    fullName: 'Marc Yao',
+    email: 'm.yao@pmelocale.ci',
+    phone: '+225 01 99 88 77 66',
+    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+    createdAt: '2026-02-01',
+    companyId: 'comp-03',
+    companyName: 'PME Locale SARL',
+    companyRole: 'Gérant / DAF',
+    tradeRegister: 'CI-ABJ-2018-B-871',
+    billingAddress: 'Zone 4, Rue du Canal, Marcory, Abidjan',
+    creditLineApproved: true,
+    creditLimit: 3000000,
+    negotiatedDiscountRate: 10,
+    authorizedBookers: [
+      'Marc Yao (Gérant)'
+    ]
+  },
+  {
+    id: 'user-06',
+    type: 'driver',
+    fullName: 'Ibrahim Koné',
+    email: 'i.kone@nyokah.ci',
+    phone: '+225 07 48 12 34 56',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+    createdAt: '2024-01-10'
+  },
+  {
+    id: 'user-07',
+    type: 'admin',
+    fullName: 'Direction Nyokah Mobility',
+    email: 'admin@nyokah.ci',
+    phone: '+225 27 20 21 00 00',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    createdAt: '2024-01-01'
+  }
+];
+
+export const INITIAL_WHATSAPP_NOTIFICATIONS: WhatsAppNotification[] = [
+  {
+    id: 'wa-01',
+    bookingId: 'RES-0941',
+    type: 'driver_assigned',
+    title: 'Chauffeur VIP affecté & Véhicule préparé',
+    recipientName: 'Kouassi Jean-Eudes',
+    recipientPhone: '+225 07 09 11 22 33',
+    timestamp: '2026-08-25T14:32:00',
+    timeFormatted: '14:32',
+    status: 'read',
+    isRead: false,
+    vehicleName: 'Mercedes-Benz Classe E 350 (2023)',
+    plateNumber: '4521 KK 01',
+    driverName: 'Ibrahim Koné',
+    driverPhone: '+225 07 48 12 34 56',
+    driverPhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
+    driverRating: 4.95,
+    pickupLocation: 'Sofitel Abidjan Hôtel Ivoire, Cocody',
+    pickupDate: '2026-08-28',
+    pickupTime: '08:00',
+    liveEta: 'À l’heure pour la prise en charge',
+    messageBody: `⭐ *NYOKAH MOBILITY CONCIERGERIE VIP* ⭐
+
+Bonjour *M. Kouassi Jean-Eudes*,
+
+Votre réservation *#RES-0941* est confirmée et votre chauffeur attitré est assigné pour votre mission.
+
+🚗 *Véhicule :* Mercedes-Benz Classe E 350 (2023)
+🔢 *Immatriculation :* 4521 KK 01 (Noir Obsidienne)
+👔 *Chauffeur VIP :* Ibrahim Koné (⭐ 4.95/5)
+📞 *Contact direct :* +225 07 48 12 34 56
+
+📍 *Lieu de prise en charge :* Sofitel Abidjan Hôtel Ivoire, Cocody
+📅 *Date & Heure :* 28/08/2026 à 08:00
+📋 *Formule :* Journée avec Chauffeur (8h-18h)
+
+Votre chauffeur vous attendra 15 minutes à l'avance avec une pancarte VIP et vous contactera dès son arrivée sur place.
+
+_L'équipe Nyokah reste à votre disposition 24/7 pour toute demande d'ajustement._`
+  },
+  {
+    id: 'wa-02',
+    bookingId: 'RES-0942',
+    type: 'booking_validated',
+    title: 'Réservation Validée par Nyokah Dispatch',
+    recipientName: 'Aminata Touré',
+    recipientPhone: '+225 07 44 55 66 77',
+    timestamp: '2026-08-25T11:15:00',
+    timeFormatted: '11:15',
+    status: 'read',
+    isRead: false,
+    vehicleName: 'Toyota Land Cruiser 300 V6 GR Sport',
+    plateNumber: '6620 LK 01',
+    driverName: 'Bakary Traoré',
+    driverPhone: '+225 01 23 45 67 89',
+    driverPhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+    driverRating: 4.90,
+    pickupLocation: 'Siège Orange CI, Boulevard de Marseille, Marcory',
+    pickupDate: '2026-09-01',
+    pickupTime: '07:30',
+    liveEta: 'Confirmé au planning',
+    messageBody: `✅ *RÉSERVATION VALIDÉE — ACCORD B2B*
+
+Bonjour *Mme Aminata Touré (Orange Côte d'Ivoire)*,
+
+Nous vous confirmons la validation de votre mission *#RES-0942*.
+
+🚙 *Véhicule :* Toyota Land Cruiser 300 GR Sport
+🏢 *Compte :* Orange Côte d'Ivoire (-20% B2B appliqué)
+📍 *Départ :* Siège Orange CI, Marcory
+🏁 *Destination :* Yamoussoukro (Mission officielle)
+📅 *Période :* 01/09/2026 au 04/09/2026
+
+👤 *Chauffeur dédié :* Bakary Traoré (+225 01 23 45 67 89)
+📄 La facture proforma et le voucher ont été synchronisés sur votre espace entreprise Nyokah.
+
+Bonne route avec Nyokah Mobility !`
+  },
+  {
+    id: 'wa-03',
+    bookingId: 'RES-0940',
+    type: 'driver_approaching',
+    title: 'Chauffeur en approche à l’Aéroport FHB',
+    recipientName: 'Jean Dupont',
+    recipientPhone: '+225 07 08 09 10 11',
+    timestamp: '2026-08-24T18:45:00',
+    timeFormatted: '18:45',
+    status: 'read',
+    isRead: true,
+    vehicleName: 'Toyota Prado TX-L (2023)',
+    plateNumber: '8945 KK 01',
+    driverName: 'Jean-Marc Kouadio',
+    driverPhone: '+225 05 66 78 90 12',
+    driverPhoto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
+    driverRating: 4.98,
+    pickupLocation: 'Aéroport Félix-Houphouët-Boigny (FHB) - Hall Arrivées',
+    pickupDate: '2026-08-24',
+    pickupTime: '19:15',
+    liveEta: 'Arrivé sur place - Hall Arrivée Vol AF 702',
+    messageBody: `👋 *VOTRE CHAUFFEUR EST ARRIVÉ*
+
+Bonjour *M. Jean Dupont (SIFCA)*,
+
+Votre chauffeur *Jean-Marc Kouadio* est stationné dans la zone VIP de l'Aéroport Félix-Houphouët-Boigny.
+
+🚙 *Véhicule :* Toyota Prado TX-L (8945 KK 01)
+📍 *Position :* Devant la sortie principale Hall Arrivées
+🪧 *Pancarte d’accueil :* GROUPE SIFCA / M. DUPONT
+📞 *Appel / WhatsApp Chauffeur :* +225 05 66 78 90 12
+
+Climatisation à température et bouteilles d'eau fraîches à bord.`
+  }
+];
+

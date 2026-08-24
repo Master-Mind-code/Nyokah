@@ -34,7 +34,9 @@ export const ClientHome: React.FC<ClientHomeProps> = ({ onOpenVehicleModal }) =>
     setBookingDraft,
     currentCompanyId,
     companies,
-    packs
+    packs,
+    openAuthModal,
+    currentUser
   } = useApp();
 
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('Tous');
@@ -485,7 +487,115 @@ export const ClientHome: React.FC<ClientHomeProps> = ({ onOpenVehicleModal }) =>
         </div>
       </section>
 
-      {/* 5. B2B Corporate CTA Banner */}
+      {/* 5. Member & Corporate Auth Cards */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* Particuliers Card */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col justify-between space-y-6 relative overflow-hidden group hover:border-[#795900]/40 transition-all">
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#D4A017]/15 text-[#795900] flex items-center justify-center font-bold">
+                <Award className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] uppercase tracking-wider font-extrabold text-[#795900]">
+                  Nyokah Club VIP
+                </span>
+                <h3 className="text-xl sm:text-2xl font-bold font-serif text-slate-900">
+                  Espace Particuliers & Voyageurs
+                </h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Créez votre compte pour enregistrer vos adresses favorites à Abidjan, cumuler des points fidélité et réserver en 2 clics avec chauffeur attitré.
+              </p>
+              <div className="space-y-2 pt-2 text-xs text-slate-700">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span><strong>+500 points offerts</strong> dès votre inscription</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Gestion des adresses favorites (Résidence, Bureau, Aéroport)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+              {currentUser ? (
+                <button
+                  onClick={() => setClientTab('user-profile')}
+                  className="w-full py-3 px-5 rounded-full bg-[#0B132B] text-white hover:bg-[#1A264F] text-xs font-bold transition-all text-center"
+                >
+                  Accéder à mon Profil ({currentUser.fullName})
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => openAuthModal('register-individual')}
+                    className="flex-1 py-3 px-4 rounded-full bg-[#795900] hover:bg-[#5c4300] text-white text-xs font-bold transition-all text-center shadow-xs"
+                  >
+                    Créer mon compte
+                  </button>
+                  <button
+                    onClick={() => openAuthModal('login')}
+                    className="py-3 px-4 rounded-full border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all text-center"
+                  >
+                    Se connecter
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Entreprises B2B Card */}
+          <div className="bg-[#0B132B] text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-xl flex flex-col justify-between space-y-6 relative overflow-hidden group">
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#D4A017] text-[#0B132B] flex items-center justify-center font-bold shadow-md">
+                <Building2 className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] uppercase tracking-wider font-extrabold text-[#D4A017]">
+                  Accords-Cadres & Grands Comptes
+                </span>
+                <h3 className="text-xl sm:text-2xl font-bold font-serif text-white">
+                  Compte Entreprise & DAF (B2B)
+                </h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Profitez d'une remise contractuelle immédiate jusqu'à -20%, d'une ligne de crédit fin de mois et de la gestion multi-collaborateurs.
+              </p>
+              <div className="space-y-2 pt-2 text-xs text-slate-200">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#D4A017] shrink-0" />
+                  <span><strong>Remise de -15% à -20%</strong> automatique sur toute la flotte</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#D4A017] shrink-0" />
+                  <span>Factures proforma, relevés comptables & ligne de crédit 30j</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
+              <button
+                onClick={() => openAuthModal('register-company')}
+                className="flex-1 py-3 px-4 rounded-full bg-[#D4A017] hover:bg-[#c49212] text-[#0B132B] text-xs font-bold transition-all text-center shadow-md"
+              >
+                Ouvrir un compte Société
+              </button>
+              <button
+                onClick={() => setClientTab('company-space')}
+                className="py-3 px-4 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all text-center"
+              >
+                Portail B2B
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* 6. B2B Corporate CTA Banner */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-[#1A1A2E] text-white rounded-3xl p-8 sm:p-12 relative overflow-hidden border border-[#D4A017]/30 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="space-y-4 max-w-xl">

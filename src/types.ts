@@ -156,7 +156,7 @@ export interface Ride {
   notes?: string;
 }
 
-export interface PromoRule {
+export type PromoRule = {
   code: string;
   description: string;
   discountPercentage: number;
@@ -164,4 +164,70 @@ export interface PromoRule {
   minDays?: number;
   expiresAt: string;
   active: boolean;
+};
+
+export type UserType = 'individual' | 'company' | 'driver' | 'admin';
+
+export type AuthTab = 'login' | 'register-individual' | 'register-company';
+
+export interface UserAccount {
+  id: string;
+  type: UserType;
+  fullName: string;
+  email: string;
+  phone: string;
+  password?: string;
+  avatarUrl?: string;
+  createdAt: string;
+
+  // Specific to Particuliers (individual clients)
+  city?: string;
+  district?: string; // Cocody, Marcory, Plateau, etc.
+  savedAddresses?: string[];
+  loyaltyPoints?: number;
+  tier?: 'Standard' | 'Silver' | 'Gold VIP';
+
+  // Specific to Entreprise (corporate B2B clients)
+  companyId?: string;
+  companyName?: string;
+  companyRole?: string; // e.g. DAF, Responsable Logistique, DG
+  tradeRegister?: string; // RCCM
+  billingAddress?: string;
+  creditLineApproved?: boolean;
+  creditLimit?: number; // in FCFA
+  negotiatedDiscountRate?: number;
+  authorizedBookers?: string[];
 }
+
+// WhatsApp Notification System
+export type WhatsAppNotificationType = 
+  | 'booking_received'
+  | 'booking_validated' 
+  | 'driver_assigned' 
+  | 'driver_approaching' 
+  | 'trip_completed';
+
+export interface WhatsAppNotification {
+  id: string;
+  bookingId: string;
+  type: WhatsAppNotificationType;
+  title: string;
+  recipientName: string;
+  recipientPhone: string;
+  timestamp: string;
+  timeFormatted: string;
+  status: 'sent' | 'delivered' | 'read';
+  messageBody: string;
+  vehicleName: string;
+  plateNumber?: string;
+  driverName?: string;
+  driverPhone?: string;
+  driverPhoto?: string;
+  driverRating?: number;
+  pickupLocation: string;
+  pickupDate: string;
+  pickupTime: string;
+  isRead: boolean;
+  liveEta?: string;
+}
+
