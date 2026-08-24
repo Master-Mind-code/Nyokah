@@ -1,0 +1,6 @@
+{
+  "name": "Nyokah - Location de Véhicules avec Chauffeur",
+  "description": "Plateforme premium de location de véhicules avec chauffeur pour entreprises et particuliers en Côte d'Ivoire. Réservation, tarification B2B avec rabais négociés, gestion de flotte et dashboard administrateur.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
