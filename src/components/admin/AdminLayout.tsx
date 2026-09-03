@@ -14,7 +14,8 @@ import {
   Menu, 
   X,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  LogOut
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -30,7 +31,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     bookings, 
     vehicles, 
     drivers,
-    rides 
+    rides,
+    logout
   } = useApp();
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -113,14 +115,21 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           })}
         </nav>
 
-        {/* Bottom Switch Role */}
-        <div className="pt-4 border-t border-slate-300 mt-auto">
+        {/* Bottom Switch Role & Logout */}
+        <div className="pt-4 border-t border-slate-300 mt-auto space-y-2">
           <button
             onClick={() => setRole('client')}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 border border-[#817662] text-[#795900] hover:bg-white text-xs font-bold rounded-full transition-colors bg-transparent shadow-xs"
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 border border-[#817662] text-[#795900] hover:bg-white text-xs font-bold rounded-full transition-colors bg-transparent shadow-xs cursor-pointer"
           >
             <ArrowLeftRight className="w-3.5 h-3.5" />
             <span>Basculer Vue Client</span>
+          </button>
+          <button
+            onClick={() => logout()}
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-rose-700 hover:bg-rose-50 text-xs font-bold rounded-full transition-colors cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Déconnexion Admin</span>
           </button>
         </div>
       </aside>
@@ -193,15 +202,26 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               ))}
             </nav>
 
-            <button
-              onClick={() => {
-                setRole('client');
-                setMobileDrawerOpen(false);
-              }}
-              className="mt-4 w-full py-2.5 border border-[#817662] text-[#795900] text-xs font-bold rounded-full bg-white"
-            >
-              Basculer en mode Client
-            </button>
+            <div className="mt-4 space-y-2">
+              <button
+                onClick={() => {
+                  setRole('client');
+                  setMobileDrawerOpen(false);
+                }}
+                className="w-full py-2 border border-[#817662] text-[#795900] text-xs font-bold rounded-full bg-white cursor-pointer"
+              >
+                Basculer en mode Client
+              </button>
+              <button
+                onClick={() => {
+                  logout();
+                  setMobileDrawerOpen(false);
+                }}
+                className="w-full py-2 text-rose-700 hover:bg-rose-50 text-xs font-bold rounded-full cursor-pointer"
+              >
+                Déconnexion Admin
+              </button>
+            </div>
           </div>
         </div>
       )}

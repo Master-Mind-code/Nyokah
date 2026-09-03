@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 export const Footer: React.FC = () => {
-  const { setClientTab, setRole } = useApp();
+  const { setClientTab, setRole, currentUser, openAuthModal } = useApp();
 
   return (
     <footer className="bg-[#1A1A2E] text-white pt-16 pb-24 md:pb-12 border-t border-[#D4A017]/20">
@@ -134,10 +134,17 @@ export const Footer: React.FC = () => {
               </li>
               <li className="pt-2">
                 <button
-                  onClick={() => setRole('admin')}
-                  className="text-xs text-slate-400 hover:text-[#D4A017] underline"
+                  onClick={() => {
+                    if (currentUser?.type === 'admin') {
+                      setRole('admin');
+                    } else {
+                      openAuthModal('login');
+                    }
+                  }}
+                  className="text-xs text-slate-400 hover:text-[#D4A017] flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
-                  Accès réservé : Gestionnaire de Flotte (Admin)
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#D4A017]" />
+                  <span>Portail Administrateur (Connexion requise)</span>
                 </button>
               </li>
             </ul>

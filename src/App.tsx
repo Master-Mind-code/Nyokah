@@ -30,7 +30,7 @@ import { AdminRides } from './components/admin/AdminRides';
 import { Vehicle } from './types';
 
 const MainAppContent: React.FC = () => {
-  const { role, clientTab, adminTab, startBookingForVehicle } = useApp();
+  const { role, clientTab, adminTab, startBookingForVehicle, currentUser } = useApp();
   const [selectedVehicleForModal, setSelectedVehicleForModal] = useState<Vehicle | null>(null);
 
   const handleOpenVehicleModal = (vehicle: Vehicle) => {
@@ -65,8 +65,20 @@ const MainAppContent: React.FC = () => {
         onBook={handleBookFromModal}
       />
 
-      {role === 'client' ? (
-        // CLIENT SPACE
+      {role === 'admin' && currentUser?.type === 'admin' ? (
+        // ADMIN BACK-OFFICE SPACE (Secured: Only authenticated Super-Admin)
+        <AdminLayout>
+          {adminTab === 'dashboard' && <AdminDashboard />}
+          {adminTab === 'reservations' && <AdminReservations />}
+          {adminTab === 'fleet' && <AdminFleet />}
+          {adminTab === 'pricing-discounts' && <AdminPricingDiscounts />}
+          {adminTab === 'packs' && <AdminPacks />}
+          {adminTab === 'companies' && <AdminCompanies />}
+          {adminTab === 'drivers-partners' && <AdminDriversPartners />}
+          {adminTab === 'rides' && <AdminRides />}
+        </AdminLayout>
+      ) : (
+        // CLIENT SPACE (Default for visitors & non-admin users)
         <div className="flex flex-col min-h-screen">
           <Header />
           <main className="flex-1">
@@ -89,18 +101,6 @@ const MainAppContent: React.FC = () => {
           <Footer />
           <MobileBottomNav />
         </div>
-      ) : (
-        // ADMIN BACK-OFFICE SPACE
-        <AdminLayout>
-          {adminTab === 'dashboard' && <AdminDashboard />}
-          {adminTab === 'reservations' && <AdminReservations />}
-          {adminTab === 'fleet' && <AdminFleet />}
-          {adminTab === 'pricing-discounts' && <AdminPricingDiscounts />}
-          {adminTab === 'packs' && <AdminPacks />}
-          {adminTab === 'companies' && <AdminCompanies />}
-          {adminTab === 'drivers-partners' && <AdminDriversPartners />}
-          {adminTab === 'rides' && <AdminRides />}
-        </AdminLayout>
       )}
     </div>
   );

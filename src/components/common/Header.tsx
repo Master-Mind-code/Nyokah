@@ -291,28 +291,45 @@ export const Header: React.FC = () => {
                         <Car className="w-4 h-4 text-emerald-600" />
                         <span>Réserver un véhicule</span>
                       </button>
+
+                      {currentUser.type === 'admin' && (
+                        <button
+                          onClick={() => {
+                            setRole('admin');
+                            setShowUserDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-amber-50 text-[#795900] font-bold flex items-center gap-2 border-t border-slate-100 cursor-pointer"
+                        >
+                          <ShieldCheck className="w-4 h-4 text-[#795900]" />
+                          <span>Accéder au Back-Office Nyokah</span>
+                        </button>
+                      )}
                     </div>
 
-                    {/* Fast Switch User */}
+                    {/* Fast Switch Client Profile */}
                     <div className="border-t border-slate-100 py-1.5 px-3">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                        Changer de compte de test :
+                        Changer de compte client :
                       </p>
                       <div className="space-y-1">
-                        {users.slice(0, 4).map((u) => (
+                        {users.filter((u) => u.type !== 'admin' && u.type !== 'driver').map((u) => (
                           <button
                             key={u.id}
                             onClick={() => {
                               loginAsUser(u);
                               setShowUserDropdown(false);
                             }}
-                            className={`w-full text-left px-2 py-1 rounded-lg text-[11px] flex items-center justify-between hover:bg-slate-100 ${
+                            className={`w-full text-left px-2 py-1 rounded-lg text-[11px] flex items-center justify-between hover:bg-slate-100 cursor-pointer ${
                               currentUser.id === u.id ? 'bg-[#D4A017]/15 font-bold text-[#795900]' : 'text-slate-600'
                             }`}
                           >
                             <span className="truncate">{u.fullName}</span>
-                            <span className="text-[10px] text-slate-400">
-                              {u.type === 'company' ? 'B2B' : u.type === 'admin' ? 'Admin' : 'Particulier'}
+                            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                              u.type === 'company' 
+                                ? 'bg-blue-100 text-blue-900' 
+                                : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {u.type === 'company' ? 'B2B' : 'Particulier'}
                             </span>
                           </button>
                         ))}
@@ -356,25 +373,27 @@ export const Header: React.FC = () => {
             </div>
           )}
 
-          {/* Prominent Role Switcher Button */}
-          <button
-            onClick={() => setRole(role === 'client' ? 'admin' : 'client')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border shadow-xs ${
-              role === 'admin'
-                ? 'bg-[#D4A017] text-[#0B132B] border-[#B8860B] hover:bg-[#c49212]'
-                : 'bg-slate-100 text-[#0B132B] border-slate-300 hover:bg-slate-200'
-            }`}
-            title="Basculer entre la vue Client et le Back-office Administrateur"
-          >
-            <ArrowLeftRight className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{role === 'client' ? 'Back-Office Admin' : 'Vue Client'}</span>
-            <span className="sm:hidden">{role === 'client' ? 'Admin' : 'Client'}</span>
-            {role === 'client' && pendingBookingsCount > 0 && (
-              <span className="bg-[#E94560] text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
-                {pendingBookingsCount}
-              </span>
-            )}
-          </button>
+          {/* Role Switcher Button: ONLY visible once authenticated as Super-Admin */}
+          {currentUser?.type === 'admin' && (
+            <button
+              onClick={() => setRole(role === 'client' ? 'admin' : 'client')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border shadow-xs cursor-pointer ${
+                role === 'admin'
+                  ? 'bg-[#D4A017] text-[#0B132B] border-[#B8860B] hover:bg-[#c49212]'
+                  : 'bg-slate-100 text-[#0B132B] border-slate-300 hover:bg-slate-200'
+              }`}
+              title="Basculer entre la vue Client et le Back-office Administrateur"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{role === 'client' ? 'Back-Office Admin' : 'Vue Client'}</span>
+              <span className="sm:hidden">{role === 'client' ? 'Admin' : 'Client'}</span>
+              {role === 'client' && pendingBookingsCount > 0 && (
+                <span className="bg-[#E94560] text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+                  {pendingBookingsCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Mobile hamburger button */}
           <button
@@ -459,18 +478,20 @@ export const Header: React.FC = () => {
             </div>
           )}
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs text-slate-500">Mode actuel :</span>
-            <button
-              onClick={() => {
-                setRole(role === 'client' ? 'admin' : 'client');
-                setMobileMenuOpen(false);
-              }}
-              className="text-xs font-bold text-[#795900] underline"
-            >
-              Passer en mode {role === 'client' ? 'Admin' : 'Client'}
-            </button>
-          </div>
+          {currentUser?.type === 'admin' && (
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-xs text-slate-500">Mode actuel :</span>
+              <button
+                onClick={() => {
+                  setRole(role === 'client' ? 'admin' : 'client');
+                  setMobileMenuOpen(false);
+                }}
+                className="text-xs font-bold text-[#795900] underline cursor-pointer"
+              >
+                Passer en mode {role === 'client' ? 'Admin' : 'Client'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </header>

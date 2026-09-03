@@ -81,26 +81,28 @@ export const MobileBottomNav: React.FC = () => {
         <span className="text-[10px] mt-0.5">{currentUser ? 'Mon Compte' : 'Connexion'}</span>
       </button>
 
-      <button
-        onClick={() => {
-          setRole(role === 'client' ? 'admin' : 'client');
-        }}
-        className={`flex flex-col items-center justify-center relative transition-all ${
-          role === 'admin'
-            ? 'text-[#E94560] font-bold scale-105'
-            : 'text-slate-500 hover:text-slate-900'
-        }`}
-      >
-        <div className={`p-1 rounded-full ${role === 'admin' ? 'bg-[#E94560]/20 text-[#E94560]' : ''}`}>
-          <ShieldCheck className="w-5 h-5" />
-        </div>
-        <span className="text-[10px] mt-0.5">Admin</span>
-        {pendingCount > 0 && (
-          <span className="absolute top-0 right-3 w-4 h-4 bg-[#E94560] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-            {pendingCount}
-          </span>
-        )}
-      </button>
+      {currentUser?.type === 'admin' && (
+        <button
+          onClick={() => {
+            setRole(role === 'client' ? 'admin' : 'client');
+          }}
+          className={`flex flex-col items-center justify-center relative transition-all ${
+            role === 'admin'
+              ? 'text-[#E94560] font-bold scale-105'
+              : 'text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <div className={`p-1 rounded-full ${role === 'admin' ? 'bg-[#E94560]/20 text-[#E94560]' : ''}`}>
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <span className="text-[10px] mt-0.5">Admin</span>
+          {pendingCount > 0 && (
+            <span className="absolute top-0 right-3 w-4 h-4 bg-[#E94560] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              {pendingCount}
+            </span>
+          )}
+        </button>
+      )}
     </nav>
   );
 };

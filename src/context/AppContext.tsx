@@ -429,7 +429,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logout = () => {
     setCurrentUser(null);
     setCurrentCompanyId(null);
+    setRole('client');
     showToast('Vous avez été déconnecté avec succès.', 'info');
+  };
+
+  const setRoleSecure = (newRole: Role) => {
+    if (newRole === 'admin') {
+      if (!currentUser || currentUser.type !== 'admin') {
+        openAuthModal('login');
+        showToast('Accès restreint. Veuillez vous connecter avec le compte Super-Admin.', 'info');
+        return;
+      }
+    }
+    setRole(newRole);
   };
 
   const updateUserProfile = (data: Partial<UserAccount>) => {
@@ -987,7 +999,7 @@ _Nyokah Mobility — Service Conciergerie 24/7_`;
     <AppContext.Provider
       value={{
         role,
-        setRole,
+        setRole: setRoleSecure,
         clientTab,
         setClientTab,
         adminTab,

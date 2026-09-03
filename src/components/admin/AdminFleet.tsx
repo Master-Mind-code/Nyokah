@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useApp, formatFCFA } from '../../context/AppContext';
 import { Vehicle, VehicleCategory, VehicleStatus, OwnershipType } from '../../types';
 import { 
@@ -22,7 +22,10 @@ import {
   CheckCircle2,
   HelpCircle,
   TrendingUp,
-  RotateCcw
+  RotateCcw,
+  Upload,
+  Image as ImageIcon,
+  Link2
 } from 'lucide-react';
 
 // Reference date for date calculations (consistent with app timeline)
@@ -114,6 +117,63 @@ export const AdminFleet: React.FC = () => {
     lastMaintenanceDate: '2026-03-10',
     maintenanceNotes: 'Entretien périodique standard'
   });
+
+  // Image Upload State
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadTab, setUploadTab] = useState<'upload' | 'preset' | 'url'>('upload');
+
+  const VEHICLE_PRESET_IMAGES = [
+    { label: 'Toyota Land Cruiser Prado V8', url: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1000&q=80', cat: 'SUV Prestige' },
+    { label: 'Mercedes-Benz Classe E Berline VIP', url: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1000&q=80', cat: 'VIP Prestige' },
+    { label: 'Toyota Corolla Berline Affaires', url: 'https://images.unsplash.com/photo-1550355291-bbee04a92027?auto=format&fit=crop&w=1000&q=80', cat: 'Berline' },
+    { label: 'Hyundai Staria / Hiace Minibus VIP', url: 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=1000&q=80', cat: 'Van / Minibus' },
+    { label: 'Range Rover Sport Luxe', url: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?auto=format&fit=crop&w=1000&q=80', cat: 'SUV VIP' }
+  ];
+
+  const handleImageFileUpload = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      showToast('Format non supporté. Veuillez sélectionner une image (PNG, JPG, JPEG, WEBP).', 'error');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      showToast('Image trop volumineuse. La taille maximale est de 8 Mo.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (result) {
+        setFormData((prev) => ({ ...prev, imageUrl: result }));
+        showToast(`Photo "${file.name}" importée avec succès !`, 'success');
+      }
+    };
+    reader.onerror = () => {
+      showToast('Erreur lors de la lecture du fichier image.', 'error');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleImageFileUpload(e.dataTransfer.files[0]);
+    }
+  };
 
   // Calculate maintenance summary statistics
   const maintenanceStats = useMemo(() => {
@@ -979,16 +1039,200 @@ export const AdminFleet: React.FC = () => {
                 </div>
               </div>
 
-              {/* Image URL */}
-              <div>
-                <label className="block uppercase font-bold text-slate-600 mb-1">URL Photo Principale</label>
-                <input
-                  type="url"
-                  value={formData.imageUrl || ''}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-[11px] text-slate-900"
-                />
+              {/* Vehicle Photo Upload & Management */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <label className="block uppercase font-bold text-slate-700 text-xs flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-[#795900]" />
+                    <span>Photo Principale du Véhicule (Catalogue & Fiche) *</span>
+                  </label>
+
+                  {/* Mode switcher tabs */}
+                  <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 text-[11px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setUploadTab('upload')}
+                      className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                        uploadTab === 'upload' ? 'bg-[#795900] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>Uploader un fichier</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUploadTab('preset')}
+                      className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                        uploadTab === 'preset' ? 'bg-[#795900] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Bibliothèque VIP</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUploadTab('url')}
+                      className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                        uploadTab === 'url' ? 'bg-[#795900] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Link2 className="w-3 h-3" />
+                      <span>Lien URL</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* TAB 1: FILE UPLOAD (DRAG & DROP + CLICK) */}
+                {uploadTab === 'upload' && (
+                  <div>
+                    {/* Hidden Native File Input */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      id="vehicle-image-file-input"
+                      accept="image/png, image/jpeg, image/jpg, image/webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageFileUpload(file);
+                      }}
+                    />
+
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer select-none ${
+                        isDragging
+                          ? 'border-[#795900] bg-amber-50/70 ring-4 ring-[#795900]/20'
+                          : 'border-slate-300 hover:border-[#795900] bg-white hover:bg-slate-50/80'
+                      }`}
+                    >
+                      <div className="w-12 h-12 rounded-full bg-amber-100 text-[#795900] flex items-center justify-center mx-auto mb-3">
+                        <Upload className="w-6 h-6 animate-bounce" />
+                      </div>
+                      <p className="text-sm font-bold text-slate-800">
+                        {isDragging ? 'Déposez la photo ici...' : 'Glissez-déposez la photo du véhicule ici'}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        ou <span className="text-[#795900] font-bold underline">cliquez pour parcourir vos fichiers</span>
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-2">
+                        Formats acceptés : PNG, JPG, JPEG, WEBP • Taille max : 8 Mo
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: PRESET LIBRARY */}
+                {uploadTab === 'preset' && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-600 font-medium">
+                      Sélectionnez une photo haute résolution parmi nos modèles exécutifs types :
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                      {VEHICLE_PRESET_IMAGES.map((preset, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({ ...prev, imageUrl: preset.url }));
+                            showToast(`Photo "${preset.label}" sélectionnée.`, 'success');
+                          }}
+                          className={`flex items-center gap-3 p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                            formData.imageUrl === preset.url
+                              ? 'border-[#795900] bg-amber-50/60 ring-2 ring-[#795900]/20'
+                              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <img
+                            src={preset.url}
+                            alt={preset.label}
+                            className="w-12 h-10 object-cover rounded-lg shrink-0 border border-slate-200"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-slate-900 truncate">{preset.label}</p>
+                            <span className="text-[10px] text-slate-500">{preset.cat}</span>
+                          </div>
+                          {formData.imageUrl === preset.url && (
+                            <CheckCircle2 className="w-4 h-4 text-[#795900] shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: URL MANUELLE */}
+                {uploadTab === 'url' && (
+                  <div>
+                    <label className="block uppercase font-bold text-slate-600 text-[11px] mb-1">
+                      Lien direct vers l'image web
+                    </label>
+                    <input
+                      type="url"
+                      value={formData.imageUrl || ''}
+                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                      placeholder="https://images.unsplash.com/..."
+                      className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-mono text-[11px] text-slate-900"
+                    />
+                  </div>
+                )}
+
+                {/* ACTIVE PHOTO PREVIEW CARD */}
+                {formData.imageUrl && (
+                  <div className="mt-3 bg-white border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row items-center gap-4">
+                    <div className="relative w-full sm:w-36 h-24 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
+                      <img
+                        src={formData.imageUrl}
+                        alt="Aperçu véhicule"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback on error
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80';
+                        }}
+                      />
+                      <span className="absolute bottom-1 right-1 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                        Aperçu
+                      </span>
+                    </div>
+
+                    <div className="min-w-0 flex-1 w-full space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Photo prête pour le catalogue
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 font-medium truncate">
+                        {formData.brand || 'Marque'} {formData.model || 'Modèle'} ({formData.year || 2024})
+                      </p>
+                      <p className="text-[11px] text-slate-400 truncate max-w-xs font-mono">
+                        {formData.imageUrl.startsWith('data:image') ? 'Fichier importé localement (Base64)' : formData.imageUrl}
+                      </p>
+                    </div>
+
+                    <div className="flex sm:flex-col gap-2 w-full sm:w-auto shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex-1 sm:flex-none px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Remplacer</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData((prev) => ({ ...prev, imageUrl: '' }))}
+                        className="flex-1 sm:flex-none px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Supprimer</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Checkboxes */}

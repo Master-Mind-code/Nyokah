@@ -189,40 +189,82 @@ export const AuthModal: React.FC = () => {
           {authModalTab === 'login' && (
             <div className="space-y-6">
               
-              {/* Quick Demo Switcher */}
+              {/* Quick Demo Switcher with prominent Super-Admin entry */}
               <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4">
                 <div className="flex items-center justify-between mb-2.5">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5 text-[#795900]" />
-                    Profils de test en 1 clic :
+                    Accès Rapides & Profils de Démonstration :
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {users.slice(0, 4).map((u) => (
-                    <button
-                      key={u.id}
-                      onClick={() => loginAsUser(u)}
-                      className="text-left p-2.5 bg-white border border-slate-200 hover:border-[#795900] hover:bg-[#F9F9FD] rounded-xl transition-all flex items-center gap-2.5 shadow-xs group"
-                    >
-                      <img
-                        src={u.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'}
-                        alt={u.fullName}
-                        className="w-8 h-8 rounded-full object-cover border border-slate-200"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-slate-900 truncate group-hover:text-[#795900]">
-                          {u.fullName}
+
+                {/* PROMINENT ADMIN ACCESS BUTTON (Méthode 2) */}
+                {users.find((u) => u.type === 'admin') && (
+                  <button
+                    type="button"
+                    id="btn-quick-admin-login"
+                    onClick={() => {
+                      const admin = users.find((u) => u.type === 'admin');
+                      if (admin) loginAsUser(admin);
+                    }}
+                    className="w-full mb-3.5 p-3.5 bg-gradient-to-r from-[#0B132B] via-[#111C3D] to-[#1E293B] border-2 border-[#D4A017] rounded-2xl text-left text-white flex items-center justify-between shadow-lg transition-all hover:shadow-xl hover:border-amber-300 ring-2 ring-[#D4A017]/20 group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#D4A017] to-[#F5D061] text-[#0B132B] flex items-center justify-center shrink-0 shadow-md">
+                        <ShieldCheck className="w-6 h-6 text-[#0B132B]" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs sm:text-sm font-extrabold text-white group-hover:text-[#D4A017] transition-colors truncate">
+                            Direction Nyokah Mobility (Super-Admin)
+                          </span>
+                          <span className="text-[10px] bg-[#D4A017] text-[#0B132B] font-extrabold px-2 py-0.5 rounded-full shrink-0 shadow-xs">
+                            Super-Admin
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-amber-200/90 font-mono truncate mt-0.5">
+                          admin@nyokah.ci
                         </p>
-                        <p className="text-[10px] text-slate-500 truncate">
-                          {u.type === 'company' 
-                            ? `${u.companyName} (-${u.negotiatedDiscountRate}%)`
-                            : u.type === 'admin' 
-                            ? 'Super-Admin'
-                            : `Particulier (${u.tier})`}
+                        <p className="text-[11px] text-slate-300 truncate mt-0.5">
+                          Un clic pour vous authentifier et basculer sur le Back-Office
                         </p>
                       </div>
-                    </button>
-                  ))}
+                    </div>
+                    <span className="text-xs font-bold text-[#D4A017] hidden sm:flex items-center gap-1 shrink-0 group-hover:translate-x-1 transition-transform pl-2">
+                      Accéder au Back-Office →
+                    </span>
+                  </button>
+                )}
+
+                {/* Client & Company test profiles */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {users
+                    .filter((u) => u.type !== 'admin' && u.type !== 'driver')
+                    .slice(0, 4)
+                    .map((u) => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => loginAsUser(u)}
+                        className="text-left p-2.5 bg-white border border-slate-200 hover:border-[#795900] hover:bg-[#F9F9FD] rounded-xl transition-all flex items-center gap-2.5 shadow-xs group cursor-pointer"
+                      >
+                        <img
+                          src={u.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'}
+                          alt={u.fullName}
+                          className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-slate-900 truncate group-hover:text-[#795900]">
+                            {u.fullName}
+                          </p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            {u.type === 'company' 
+                              ? `${u.companyName} (-${u.negotiatedDiscountRate}%)`
+                              : `Particulier (${u.tier})`}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
                 </div>
               </div>
 
@@ -237,21 +279,37 @@ export const AuthModal: React.FC = () => {
               {/* Login Form */}
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Adresse Email
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                      Adresse Email
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoginEmail('admin@nyokah.ci');
+                        setLoginPassword('admin2026');
+                      }}
+                      className="text-[11px] text-[#795900] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <ShieldCheck className="w-3 h-3" />
+                      Remplir identifiant Admin
+                    </button>
+                  </div>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                     <input
                       id="login-email-input"
                       type="email"
                       required
-                      placeholder="Ex: jean.dupont@orange.ci"
+                      placeholder="Ex: admin@nyokah.ci ou client@orange.ci"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#795900]/30 focus:border-[#795900]"
                     />
                   </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Compte administrateur : <span className="font-mono font-semibold text-slate-700">admin@nyokah.ci</span> (mot de passe libre en démo).
+                  </p>
                 </div>
 
                 <div>
@@ -278,6 +336,9 @@ export const AuthModal: React.FC = () => {
                       className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#795900]/30 focus:border-[#795900]"
                     />
                   </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Mot de passe démo : <span className="font-mono font-medium text-slate-700">admin2026</span> (ou n'importe quelle valeur en mode démonstration).
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2">
