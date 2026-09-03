@@ -16,6 +16,7 @@ import {
   Plus,
   ArrowUpRight
 } from 'lucide-react';
+import { AdminPerformanceCharts } from './AdminPerformanceCharts';
 
 interface AdminDashboardProps {
   onOpenAssignModal?: (bookingId: string) => void;
@@ -44,16 +45,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAssignModa
 
   const pendingBookings = bookings.filter((b) => b.status === 'En attente');
   const recentBookings = [...bookings].sort((a, b) => b.id.localeCompare(a.id)).slice(0, 5);
-
-  // Monthly revenue mock progression
-  const monthlyData = [
-    { month: 'Jan', revenue: 3100000 },
-    { month: 'Fév', revenue: 3600000 },
-    { month: 'Mar', revenue: 3900000 },
-    { month: 'Avr', revenue: 4100000 },
-    { month: 'Mai', revenue: 4250000 },
-    { month: 'Juin', revenue: 4800000 }
-  ];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
@@ -168,81 +159,70 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAssignModa
 
       </div>
 
-      {/* Visual Analytics Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Chart 1: Revenue Evolution */}
-        <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
+      {/* Performance Charts (Recharts) */}
+      <AdminPerformanceCharts bookings={bookings} />
+
+      {/* Fleet Composition & Subcontractor Share */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
           <div className="flex justify-between items-center">
             <div>
               <h3 className="font-serif font-bold text-base text-slate-900">
-                Évolution du Chiffre d'Affaires (FCFA)
+                Répartition Opérationnelle du Parc Auto
               </h3>
-              <p className="text-xs text-slate-500">Historique des 6 derniers mois à Abidjan</p>
+              <p className="text-xs text-slate-500">Capacités Flotte Propre Nyokah vs Partenaires affiliés</p>
             </div>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
-              +18.4% YTD
+            <span className="text-xs font-semibold text-slate-500">
+              Total : {vehicles.length} véhicules
             </span>
           </div>
 
-          {/* Simple custom SVG bar chart with tooltip hover */}
-          <div className="pt-4 h-48 flex items-end justify-between gap-3">
-            {monthlyData.map((item, idx) => {
-              const maxVal = 5000000;
-              const heightPercent = Math.round((item.revenue / maxVal) * 100);
-              return (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] py-1 px-1.5 rounded text-center whitespace-nowrap mb-1">
-                    {formatFCFA(item.revenue)}
-                  </div>
-                  <div 
-                    className="w-full rounded-t-xl bg-[#D4A017] group-hover:bg-[#795900] transition-all duration-300 relative"
-                    style={{ height: `${heightPercent}%` }}
-                  />
-                  <span className="text-xs font-bold text-slate-600">{item.month}</span>
-                </div>
-              );
-            })}
+          <div className="space-y-3.5 pt-2">
+            <div className="flex justify-between text-xs font-semibold">
+              <span className="text-slate-800">Flotte Propre ({ownFleetCount} véhicules)</span>
+              <span className="text-slate-900 font-bold">
+                {vehicles.length > 0 ? Math.round((ownFleetCount / vehicles.length) * 100) : 75}%
+              </span>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-3.5 overflow-hidden flex">
+              <div 
+                className="bg-[#1A1A2E] h-full transition-all" 
+                style={{ width: `${vehicles.length > 0 ? Math.round((ownFleetCount / vehicles.length) * 100) : 75}%` }} 
+              />
+              <div 
+                className="bg-[#D4A017] h-full transition-all" 
+                style={{ width: `${vehicles.length > 0 ? Math.round((subFleetCount / vehicles.length) * 100) : 25}%` }} 
+              />
+            </div>
+            <div className="flex justify-between text-xs font-semibold">
+              <span className="text-[#795900]">Partenaires Sous-traitants ({subFleetCount} véhicules)</span>
+              <span className="text-[#795900] font-bold">
+                {vehicles.length > 0 ? Math.round((subFleetCount / vehicles.length) * 100) : 25}%
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Fleet Composition & Subcontractor Share */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-5 flex flex-col justify-between">
+        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
           <div>
-            <h3 className="font-serif font-bold text-base text-slate-900 mb-1">
-              Répartition du Parc Auto
-            </h3>
-            <p className="text-xs text-slate-500">Flotte propre vs Partenaires affiliés</p>
+            <h4 className="font-serif font-bold text-base text-slate-900">Disponibilité Régie</h4>
+            <p className="text-xs text-slate-500">Chauffeurs et statut technique</p>
           </div>
-
-          {/* Ownership Breakdown Visual */}
-          <div className="space-y-3">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className="text-slate-700">Flotte Propre ({ownFleetCount} véhicules)</span>
-              <span className="text-slate-900 font-bold">75%</span>
+          <div className="space-y-2.5 text-xs">
+            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+              <span className="text-slate-600">Chauffeurs en mission :</span>
+              <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                {drivers.filter(d => d.status === 'En course').length} / {drivers.length}
+              </span>
             </div>
-            <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden flex">
-              <div className="bg-[#1A1A2E] h-full" style={{ width: '75%' }} />
-              <div className="bg-[#D4A017] h-full" style={{ width: '25%' }} />
-            </div>
-            <div className="flex justify-between text-xs font-semibold">
-              <span className="text-[#795900]">Partenaires Sous-traitants ({subFleetCount} véh.)</span>
-              <span className="text-[#795900] font-bold">25%</span>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-[#F9F9FD] border border-slate-100 space-y-2 text-xs">
-            <div className="flex justify-between items-center text-slate-600">
-              <span>Chauffeurs internes en service :</span>
-              <span className="font-bold text-slate-900">{drivers.filter(d => d.status === 'En course').length} / {drivers.length}</span>
-            </div>
-            <div className="flex justify-between items-center text-slate-600">
-              <span>Véhicules en révision :</span>
-              <span className="font-bold text-amber-600">{vehicles.filter(v => v.status === 'Entretien').length}</span>
+            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+              <span className="text-slate-600">Véhicules en révision :</span>
+              <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+                {vehicles.filter(v => v.status === 'Entretien').length}
+              </span>
             </div>
           </div>
         </div>
-
       </div>
 
       {/* Pending Reservations Alert Box if any */}
