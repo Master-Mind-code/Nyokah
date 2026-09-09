@@ -17,6 +17,15 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      // Le frontend appelle l'API en chemin relatif (/api/v1/...) : le proxy evite
+      // toute question de CORS en developpement et permet de servir les deux
+      // applications derriere le meme domaine en production.
+      proxy: {
+        '/api': {
+          target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:4000',
+          changeOrigin: true,
+        },
+      },
     },
   };
 });

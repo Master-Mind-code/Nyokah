@@ -29,14 +29,13 @@ export const Header: React.FC = () => {
     currentCompanyId, 
     setCurrentCompanyId,
     bookings,
-    resetDemoData,
     currentUser,
-    users,
-    loginAsUser,
     logout,
     openAuthModal,
     unreadWhatsAppCount,
-    openWhatsAppSimulator
+    openWhatsAppSimulator,
+    refreshAll,
+    isSyncing
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -87,13 +86,14 @@ export const Header: React.FC = () => {
 
             <span className="text-slate-600">|</span>
 
-            {/* Reset Demo Button */}
+            {/* Rechargement des données depuis l'API */}
             <button
-              onClick={resetDemoData}
-              className="text-[11px] text-slate-400 hover:text-white underline transition-colors px-1"
-              title="Réinitialiser toutes les données"
+              onClick={() => void refreshAll()}
+              disabled={isSyncing}
+              className="text-[11px] text-slate-400 hover:text-white underline transition-colors px-1 disabled:opacity-50 disabled:cursor-wait"
+              title="Recharger les données depuis le serveur"
             >
-              Reset Démo
+              {isSyncing ? 'Synchronisation…' : 'Actualiser'}
             </button>
           </div>
         </div>
@@ -304,36 +304,6 @@ export const Header: React.FC = () => {
                           <span>Accéder au Back-Office Nyokah</span>
                         </button>
                       )}
-                    </div>
-
-                    {/* Fast Switch Client Profile */}
-                    <div className="border-t border-slate-100 py-1.5 px-3">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                        Changer de compte client :
-                      </p>
-                      <div className="space-y-1">
-                        {users.filter((u) => u.type !== 'admin' && u.type !== 'driver').map((u) => (
-                          <button
-                            key={u.id}
-                            onClick={() => {
-                              loginAsUser(u);
-                              setShowUserDropdown(false);
-                            }}
-                            className={`w-full text-left px-2 py-1 rounded-lg text-[11px] flex items-center justify-between hover:bg-slate-100 cursor-pointer ${
-                              currentUser.id === u.id ? 'bg-[#D4A017]/15 font-bold text-[#795900]' : 'text-slate-600'
-                            }`}
-                          >
-                            <span className="truncate">{u.fullName}</span>
-                            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                              u.type === 'company' 
-                                ? 'bg-blue-100 text-blue-900' 
-                                : 'bg-slate-100 text-slate-600'
-                            }`}>
-                              {u.type === 'company' ? 'B2B' : 'Particulier'}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
                     </div>
 
                     {/* Logout */}

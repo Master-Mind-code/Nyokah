@@ -17,13 +17,7 @@ import {
 } from 'lucide-react';
 
 export const AdminDriversPartners: React.FC = () => {
-  const { 
-    drivers, 
-    setDrivers, 
-    subcontractors, 
-    setSubcontractors, 
-    showToast 
-  } = useApp();
+  const { drivers, subcontractors, addDriver, updateDriverStatus, isSyncing } = useApp();
 
   const [activeTab, setActiveTab] = useState<'drivers' | 'partners'>('drivers');
   const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
@@ -32,38 +26,34 @@ export const AdminDriversPartners: React.FC = () => {
     phone: '+225 07 ',
     photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
     status: 'Disponible',
-    rating: 4.9,
     experienceYears: 7,
-    completedRides: 120,
     languages: ['Français', 'Anglais'],
-    licenseNumber: 'CI-PC-2018-88412'
+    licenseNumber: ''
   });
 
-  const handleQuickDriverStatus = (driverId: string, newStatus: Driver['status']) => {
-    setDrivers((prev) => prev.map((d) => d.id === driverId ? { ...d, status: newStatus } : d));
-    showToast(`Statut chauffeur mis à jour : ${newStatus}`, 'info');
+  const handleQuickDriverStatus = async (driverId: string, newStatus: Driver['status']) => {
+    await updateDriverStatus(driverId, newStatus);
   };
 
-  const handleSaveDriver = (e: React.FormEvent) => {
+  const handleSaveDriver = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!driverFormData.name) return;
 
-    const newDriver: Driver = {
-      id: `drv-${Date.now()}`,
+    // Le numéro de permis est unique côté API : on en propose un par défaut
+    // uniquement s'il n'a pas été saisi, pour éviter les collisions.
+    await addDriver({
       name: driverFormData.name,
       phone: driverFormData.phone || '+225 07 00 00 00 00',
-      photoUrl: driverFormData.photoUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+      photoUrl: driverFormData.photoUrl || null,
       status: driverFormData.status || 'Disponible',
-      rating: 4.9,
       experienceYears: driverFormData.experienceYears || 5,
-      completedRides: 0,
       languages: driverFormData.languages || ['Français'],
-      licenseNumber: driverFormData.licenseNumber || 'CI-PC-2024-99882'
-    };
+      licenseNumber:
+        driverFormData.licenseNumber?.trim() ||
+        `CI-PC-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 89999)}`
+    });
 
-    setDrivers((prev) => [...prev, newDriver]);
     setIsDriverModalOpen(false);
-    showToast(`Chauffeur ${newDriver.name} ajouté à la brigade Nyokah.`, 'success');
   };
 
   return (

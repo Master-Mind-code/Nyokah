@@ -32,146 +32,42 @@ import {
   Users,
   Target
 } from 'lucide-react';
-import { formatFCFA } from '../../context/AppContext';
-import { Booking } from '../../types';
+import { formatFCFA, useApp } from '../../context/AppContext';
 
-interface AdminPerformanceChartsProps {
-  bookings: Booking[];
+/** « 2026-09 » → « Sept » ou « Septembre 2026 ». */
+function monthLabel(period: string, style: 'short' | 'long'): string {
+  const [year, month] = period.split('-');
+  const date = new Date(Date.UTC(Number(year), Number(month ?? '1') - 1, 1));
+  if (Number.isNaN(date.getTime())) return period;
+
+  return style === 'short'
+    ? date.toLocaleDateString('fr-FR', { month: 'short', timeZone: 'UTC' })
+    : date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 }
 
-export const AdminPerformanceCharts: React.FC<AdminPerformanceChartsProps> = ({ bookings }) => {
+export const AdminPerformanceCharts: React.FC = () => {
+  const { revenueReport } = useApp();
   const [timeRange, setTimeRange] = useState<'6m' | '12m'>('6m');
   const [chartView, setChartView] = useState<'combined' | 'revenue' | 'bookings' | 'categories'>('combined');
 
-  // Base historical monthly data for Abidjan operations (2026)
-  const fullYearData = useMemo(() => [
-    {
-      month: 'Jan',
-      monthFull: 'Janvier 2026',
-      revenue: 3450000,
-      revenueB2B: 2400000,
-      revenueB2C: 1050000,
-      targetRevenue: 3000000,
-      bookingsCount: 28,
-      completedRides: 26,
-      corporateBookings: 18,
-      privateBookings: 10,
-      avgBasket: 123200,
-      growthRate: 8.5
-    },
-    {
-      month: 'Fév',
-      monthFull: 'Février 2026',
-      revenue: 3820000,
-      revenueB2B: 2750000,
-      revenueB2C: 1070000,
-      targetRevenue: 3200000,
-      bookingsCount: 32,
-      completedRides: 31,
-      corporateBookings: 22,
-      privateBookings: 10,
-      avgBasket: 119375,
-      growthRate: 10.7
-    },
-    {
-      month: 'Mar',
-      monthFull: 'Mars 2026',
-      revenue: 4100000,
-      revenueB2B: 2900000,
-      revenueB2C: 1200000,
-      targetRevenue: 3500000,
-      bookingsCount: 36,
-      completedRides: 35,
-      corporateBookings: 25,
-      privateBookings: 11,
-      avgBasket: 113888,
-      growthRate: 7.3
-    },
-    {
-      month: 'Avr',
-      monthFull: 'Avril 2026',
-      revenue: 4480000,
-      revenueB2B: 3200000,
-      revenueB2C: 1280000,
-      targetRevenue: 3800000,
-      bookingsCount: 41,
-      completedRides: 39,
-      corporateBookings: 28,
-      privateBookings: 13,
-      avgBasket: 109268,
-      growthRate: 9.2
-    },
-    {
-      month: 'Mai',
-      monthFull: 'Mai 2026',
-      revenue: 4920000,
-      revenueB2B: 3550000,
-      revenueB2C: 1370000,
-      targetRevenue: 4200000,
-      bookingsCount: 46,
-      completedRides: 44,
-      corporateBookings: 32,
-      privateBookings: 14,
-      avgBasket: 106956,
-      growthRate: 9.8
-    },
-    {
-      month: 'Juin',
-      monthFull: 'Juin 2026',
-      revenue: 5350000,
-      revenueB2B: 3900000,
-      revenueB2C: 1450000,
-      targetRevenue: 4500000,
-      bookingsCount: 52,
-      completedRides: 50,
-      corporateBookings: 37,
-      privateBookings: 15,
-      avgBasket: 102884,
-      growthRate: 8.7
-    },
-    {
-      month: 'Juil',
-      monthFull: 'Juillet 2026',
-      revenue: 5890000,
-      revenueB2B: 4250000,
-      revenueB2C: 1640000,
-      targetRevenue: 5000000,
-      bookingsCount: 58,
-      completedRides: 56,
-      corporateBookings: 41,
-      privateBookings: 17,
-      avgBasket: 101551,
-      growthRate: 10.1
-    },
-    {
-      month: 'Août',
-      monthFull: 'Août 2026',
-      revenue: 6420000,
-      revenueB2B: 4700000,
-      revenueB2C: 1720000,
-      targetRevenue: 5500000,
-      bookingsCount: 64,
-      completedRides: 61,
-      corporateBookings: 45,
-      privateBookings: 19,
-      avgBasket: 100312,
-      growthRate: 9.0
-    },
-    {
-      month: 'Sept',
-      monthFull: 'Septembre 2026 (En cours)',
-      revenue: 4750000,
-      revenueB2B: 3500000,
-      revenueB2C: 1250000,
-      targetRevenue: 6000000,
-      bookingsCount: 48,
-      completedRides: 45,
-      corporateBookings: 34,
-      privateBookings: 14,
-      avgBasket: 98958,
-      growthRate: 12.4
-    }
-  ], []);
+  // Série mensuelle réelle renvoyée par GET /analytics/revenue, remise au
+  // format attendu par les graphiques.
+  const fullYearData = useMemo(
+    () =>
+      (revenueReport?.series ?? []).map((point) => ({
+        month: monthLabel(point.period, 'short'),
+        monthFull: monthLabel(point.period, 'long'),
+        revenue: point.revenue,
+        revenueB2B: point.revenueB2B,
+        revenueB2C: point.revenueB2C,
+        bookingsCount: point.bookings,
+        completedRides: point.completedBookings,
+        corporateBookings: point.corporateBookings,
+        privateBookings: point.privateBookings,
+        avgBasket: point.avgBasket
+      })),
+    [revenueReport]
+  );
 
   // Filtered dataset according to selected time range
   const performanceData = useMemo(() => {
@@ -182,39 +78,79 @@ export const AdminPerformanceCharts: React.FC<AdminPerformanceChartsProps> = ({ 
   }, [timeRange, fullYearData]);
 
   // Totals and averages for the active range
-  const totalPeriodRevenue = useMemo(() => 
-    performanceData.reduce((acc, curr) => acc + curr.revenue, 0), 
+  const totalPeriodRevenue = useMemo(
+    () => performanceData.reduce((acc, curr) => acc + curr.revenue, 0),
     [performanceData]
   );
 
-  const totalPeriodBookings = useMemo(() => 
-    performanceData.reduce((acc, curr) => acc + curr.bookingsCount, 0), 
+  const totalPeriodBookings = useMemo(
+    () => performanceData.reduce((acc, curr) => acc + curr.bookingsCount, 0),
     [performanceData]
   );
 
-  const averageMonthlyRevenue = useMemo(() => 
-    Math.round(totalPeriodRevenue / performanceData.length), 
+  const totalCompletedRides = useMemo(
+    () => performanceData.reduce((acc, curr) => acc + curr.completedRides, 0),
+    [performanceData]
+  );
+
+  const averageMonthlyRevenue = useMemo(
+    () => (performanceData.length > 0 ? Math.round(totalPeriodRevenue / performanceData.length) : 0),
     [totalPeriodRevenue, performanceData]
   );
 
-  const averageBasket = useMemo(() => 
-    Math.round(totalPeriodRevenue / totalPeriodBookings), 
+  const averageBasket = useMemo(
+    () => (totalPeriodBookings > 0 ? Math.round(totalPeriodRevenue / totalPeriodBookings) : 0),
     [totalPeriodRevenue, totalPeriodBookings]
   );
 
-  // Formula & Service Category distribution data
-  const formulaDistribution = [
-    { name: 'Journée avec Chauffeur (8h-18h)', value: 52, revenue: 16800000, color: '#795900' },
-    { name: 'Mise à disposition 24h VIP', value: 24, revenue: 9450000, color: '#D4A017' },
-    { name: 'Transfert Aéroport FHB', value: 14, revenue: 3850000, color: '#10B981' },
-    { name: 'Mission Régionale / Hors Abidjan', value: 10, revenue: 4100000, color: '#3B82F6' }
-  ];
+  /** Part des missions effectivement réalisées sur la période. */
+  const completionRate = useMemo(
+    () =>
+      totalPeriodBookings > 0
+        ? Math.round((totalCompletedRides / totalPeriodBookings) * 1000) / 10
+        : null,
+    [totalCompletedRides, totalPeriodBookings]
+  );
 
-  // Client Type breakdown (B2B vs B2C)
-  const clientTypeDistribution = [
-    { name: 'Entreprises B2B (Comptes Corporate)', value: 72, color: '#795900' },
-    { name: 'Particuliers & VIP Internationaux', value: 28, color: '#10B981' }
-  ];
+  /** Croissance du dernier mois renseigné par rapport au précédent. */
+  const lastMonthGrowth = useMemo(() => {
+    if (performanceData.length < 2) return null;
+    const previous = performanceData[performanceData.length - 2]!.revenue;
+    const current = performanceData[performanceData.length - 1]!.revenue;
+    if (previous <= 0) return null;
+    return Math.round(((current - previous) / previous) * 1000) / 10;
+  }, [performanceData]);
+
+  // Répartition réelle par formule de location.
+  const formulaDistribution = useMemo(() => {
+    const palette = ['#795900', '#D4A017', '#10B981', '#3B82F6', '#8B5CF6', '#F97316'];
+    return (revenueReport?.byFormula ?? []).map((entry, index) => ({
+      name: entry.formula,
+      value: entry.share,
+      revenue: entry.revenue,
+      color: palette[index % palette.length] as string
+    }));
+  }, [revenueReport]);
+
+  // Répartition B2B / particuliers, calculée sur le chiffre d'affaires réel.
+  const clientTypeDistribution = useMemo(() => {
+    const b2b = revenueReport?.totals.revenueB2B ?? 0;
+    const b2c = revenueReport?.totals.revenueB2C ?? 0;
+    const total = b2b + b2c;
+    if (total === 0) return [];
+    return [
+      {
+        name: 'Entreprises B2B (Comptes Corporate)',
+        value: Math.round((b2b / total) * 100),
+        color: '#795900'
+      },
+      {
+        name: 'Particuliers & VIP Internationaux',
+        value: Math.round((b2c / total) * 100),
+        color: '#10B981'
+      }
+    ];
+  }, [revenueReport]);
 
   // Custom Formatted Tooltip for Recharts
   const CustomPerformanceTooltip = ({ active, payload, label }: any) => {
@@ -250,7 +186,7 @@ export const AdminPerformanceCharts: React.FC<AdminPerformanceChartsProps> = ({ 
 
           <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
             <span>Régie d'Abidjan</span>
-            <span className="text-emerald-400 font-semibold">Taux de service : 99.2%</span>
+            <span className="text-emerald-400 font-semibold">Régie Nyokah</span>
           </div>
         </div>
       );
@@ -366,7 +302,7 @@ export const AdminPerformanceCharts: React.FC<AdminPerformanceChartsProps> = ({ 
           </p>
           <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
             <TrendingUp className="w-3 h-3" />
-            <span>+14.8% vs N-1</span>
+            <span>{lastMonthGrowth === null ? "Historique insuffisant" : `${lastMonthGrowth >= 0 ? "+" : ""}${lastMonthGrowth}% vs mois précédent`}</span>
           </div>
         </div>
 
@@ -381,7 +317,7 @@ export const AdminPerformanceCharts: React.FC<AdminPerformanceChartsProps> = ({ 
           </p>
           <div className="flex items-center gap-1 text-[11px] font-semibold text-blue-600">
             <ArrowUpRight className="w-3 h-3" />
-            <span>97.6% exécutées</span>
+            <span>{completionRate === null ? "Aucune mission sur la période" : `${completionRate}% exécutées`}</span>
           </div>
         </div>
 
@@ -555,17 +491,8 @@ export const AdminPerformanceCharts: React.FC<AdminPerformanceChartsProps> = ({ 
                     name="Revenus Particuliers & VIP" 
                     stroke="#10B981" 
                     strokeWidth={2}
-                    fillOpacity={1} 
-                    fill="url(#areaB2C)" 
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="targetRevenue" 
-                    name="Objectif Mensuel Fixé" 
-                    stroke="#e11d48" 
-                    strokeDasharray="5 5" 
-                    strokeWidth={2}
-                    dot={false}
+                    fillOpacity={1}
+                    fill="url(#areaB2C)"
                   />
                 </AreaChart>
               </ResponsiveContainer>

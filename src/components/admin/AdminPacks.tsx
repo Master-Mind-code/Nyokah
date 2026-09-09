@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export const AdminPacks: React.FC = () => {
-  const { packs, setPacks, showToast } = useApp();
+  const { packs, addPack, updatePack, deactivatePack, isSyncing, showToast } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPackId, setEditingPackId] = useState<string | null>(null);
 
@@ -44,20 +44,17 @@ export const AdminPacks: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.fixedPrice) {
       showToast('Veuillez renseigner le nom et le tarif.', 'error');
       return;
     }
 
-    if (editingPackId) {
-      setPacks((prev) => prev.map((p) => p.id === editingPackId ? { ...p, ...formData } as AutoPack : p));
-      showToast('Pack mis à jour avec succès.', 'success');
-    } else {
-      const newPack: AutoPack = {
-        id: `pack-${Date.now()}`,
-        name: formData.name!,
+    const saved = editingPackId
+      ? await updatePack(editingPackId, formData)
+      : await addPack({
+        name: formData.name,
         description: formData.description || 'Pack sur-mesure pour entreprises.',
         targetAudience: formData.targetAudience || 'Sociétés B2B',
         includedVehicles: formData.includedVehicles || 'Berlines exécutives et SUV',
@@ -65,18 +62,17 @@ export const AdminPacks: React.FC = () => {
         formula: formData.formula || 'Chauffeur dédié + carburant',
         features: formData.features || ['Chauffeur inclus', 'Flotte récente'],
         popular: formData.popular || false,
-        fixedPrice: formData.fixedPrice || 200000,
-        highlightDiscount: formData.highlightDiscount || 'Tarif pack négocié'
-      };
-      setPacks((prev) => [...prev, newPack]);
-      showToast('Nouveau pack créé.', 'success');
-    }
-    setIsModalOpen(false);
+        fixedPrice: formData.fixedPrice,
+          highlightDiscount: formData.highlightDiscount || 'Tarif pack négocié'
+        });
+
+    if (saved) setIsModalOpen(false);
   };
 
-  const handleDelete = (packId: string) => {
-    setPacks((prev) => prev.filter((p) => p.id !== packId));
-    showToast('Pack supprimé.', 'info');
+  // L'API désactive le pack plutôt que de le supprimer, pour préserver
+  // l'historique des réservations qui s'y rattachent.
+  const handleDelete = async (packId: string) => {
+    await deactivatePack(packId);
   };
 
   return (

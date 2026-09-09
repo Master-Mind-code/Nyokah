@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: nyokah-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nyokah
+      POSTGRES_PASSWORD: nyokah
+      POSTGRES_DB: nyokah
+    ports:
+      # Port hote 5442 : evite les conflits avec un PostgreSQL installe localement
+      # (5432) ou avec un autre conteneur de developpement (5433).
+      - '5442:5432'
+    volumes:
+      - nyokah-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nyokah -d nyokah']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  nyokah-db-data:
