@@ -23,28 +23,34 @@ interface AdminDashboardProps {
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAssignModal }) => {
-  const { 
-    bookings, 
-    vehicles, 
-    drivers, 
-    companies, 
+  const {
+    bookings,
+    vehicles,
+    drivers,
+    companies,
+    dashboardStats,
     setAdminTab,
-    updateBookingStatus 
+    updateBookingStatus
   } = useApp();
 
-  // Metrics calculations
-  const totalRevenue = bookings.reduce((sum, b) => sum + (b.status !== 'Annulée' ? b.totalAmount : 0), 0);
+  // Les agrégats viennent de l'API : ils portent sur l'ensemble des données,
+  // pas seulement sur les réservations chargées en mémoire.
+  const totalRevenue = dashboardStats?.revenue.period ?? 0;
   const totalDiscounts = bookings.reduce((sum, b) => sum + b.discountAmount, 0);
-  const totalBookingsCount = bookings.length;
-  
-  const occupiedVehiclesCount = vehicles.filter((v) => v.status === 'Loué').length;
-  const occupancyRate = Math.round((occupiedVehiclesCount / vehicles.length) * 100);
+  const totalBookingsCount = dashboardStats?.bookings.total ?? bookings.length;
 
-  const ownFleetCount = vehicles.filter((v) => v.ownership === 'Flotte Propre' || v.ownership === 'Flotte propre').length;
+  const occupiedVehiclesCount = dashboardStats?.fleet.rented ?? vehicles.filter((v) => v.status === 'Loué').length;
+  const occupancyRate = dashboardStats?.fleet.utilizationRate ?? 0;
+  const bookingsThisMonth = dashboardStats?.bookings.thisMonth ?? 0;
+  const growthRate = dashboardStats?.revenue.growthRate ?? null;
+
+  const ownFleetCount = vehicles.filter((v) => v.ownership === 'Flotte Propre').length;
   const subFleetCount = vehicles.filter((v) => v.ownership === 'Sous-traitant').length;
 
   const pendingBookings = bookings.filter((b) => b.status === 'En attente');
-  const recentBookings = [...bookings].sort((a, b) => b.id.localeCompare(a.id)).slice(0, 5);
+  const recentBookings = [...bookings]
+    .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
+    .slice(0, 5);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
@@ -93,12 +99,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAssignModa
             </div>
           </div>
           <div className="text-2xl font-bold font-serif text-slate-900">
-            {formatFCFA(totalRevenue > 0 ? totalRevenue : 4250000)}
+            {formatFCFA(totalRevenue)}
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>+12% vs mois dernier</span>
-          </div>
+          {growthRate === null ? (
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+              <span>Pas d'historique comparable</span>
+            </div>
+          ) : (
+            <div
+              className={`flex items-center gap-1.5 text-xs font-semibold ${
+                growthRate >= 0 ? 'text-emerald-600' : 'text-[#E94560]'
+              }`}
+            >
+              {growthRate >= 0 ? (
+                <TrendingUp className="w-3.5 h-3.5" />
+              ) : (
+                <TrendingDown className="w-3.5 h-3.5" />
+              )}
+              <span>
+                {growthRate >= 0 ? '+' : ''}
+                {growthRate}% vs mois dernier
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Card 2: Réservations (Mois) */}
@@ -112,11 +135,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAssignModa
             </div>
           </div>
           <div className="text-2xl font-bold font-serif text-slate-900">
-            128 <span className="text-xs font-normal text-slate-500">missions</span>
+            {bookingsThisMonth} <span className="text-xs font-normal text-slate-500">missions</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>+5% vs mois dernier</span>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+            <span>{totalBookingsCount} sur la période analysée</span>
           </div>
         </div>
 
@@ -131,11 +153,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAssignModa
             </div>
           </div>
           <div className="text-2xl font-bold font-serif text-slate-900">
-            {occupancyRate > 0 ? `${occupancyRate}%` : '84%'}
+            {`${occupancyRate}%`}
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-[#E94560] font-semibold">
-            <TrendingDown className="w-3.5 h-3.5" />
-            <span>-2% vs mois dernier</span>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+            <span>
+              {occupiedVehiclesCount} véhicule{occupiedVehiclesCount > 1 ? 's' : ''} en location
+            </span>
           </div>
         </div>
 
@@ -150,7 +173,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAssignModa
             </div>
           </div>
           <div className="text-2xl font-bold font-serif text-[#795900]">
-            {formatFCFA(totalDiscounts > 0 ? totalDiscounts : 150000)}
+            {formatFCFA(totalDiscounts)}
           </div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
             <span>Accords-cadres B2B</span>
@@ -160,7 +183,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAssignModa
       </div>
 
       {/* Performance Charts (Recharts) */}
-      <AdminPerformanceCharts bookings={bookings} />
+      <AdminPerformanceCharts />
 
       {/* Fleet Composition & Subcontractor Share */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -181,23 +204,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAssignModa
             <div className="flex justify-between text-xs font-semibold">
               <span className="text-slate-800">Flotte Propre ({ownFleetCount} véhicules)</span>
               <span className="text-slate-900 font-bold">
-                {vehicles.length > 0 ? Math.round((ownFleetCount / vehicles.length) * 100) : 75}%
+                {vehicles.length > 0 ? Math.round((ownFleetCount / vehicles.length) * 100) : 0}%
               </span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-3.5 overflow-hidden flex">
               <div 
                 className="bg-[#1A1A2E] h-full transition-all" 
-                style={{ width: `${vehicles.length > 0 ? Math.round((ownFleetCount / vehicles.length) * 100) : 75}%` }} 
+                style={{ width: `${vehicles.length > 0 ? Math.round((ownFleetCount / vehicles.length) * 100) : 0}%` }} 
               />
               <div 
                 className="bg-[#D4A017] h-full transition-all" 
-                style={{ width: `${vehicles.length > 0 ? Math.round((subFleetCount / vehicles.length) * 100) : 25}%` }} 
+                style={{ width: `${vehicles.length > 0 ? Math.round((subFleetCount / vehicles.length) * 100) : 0}%` }} 
               />
             </div>
             <div className="flex justify-between text-xs font-semibold">
               <span className="text-[#795900]">Partenaires Sous-traitants ({subFleetCount} véhicules)</span>
               <span className="text-[#795900] font-bold">
-                {vehicles.length > 0 ? Math.round((subFleetCount / vehicles.length) * 100) : 25}%
+                {vehicles.length > 0 ? Math.round((subFleetCount / vehicles.length) * 100) : 0}%
               </span>
             </div>
           </div>
@@ -288,7 +311,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenAssignModa
             <tbody className="divide-y divide-slate-100">
               {recentBookings.map((b) => (
                 <tr key={b.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3 px-3 font-mono font-bold text-slate-900">{b.id}</td>
+                  <td className="py-3 px-3 font-mono font-bold text-slate-900">{b.reference}</td>
                   <td className="py-3 px-3">
                     <div className="font-bold text-slate-900">{b.clientName}</div>
                     {b.companyId && (

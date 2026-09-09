@@ -29,7 +29,9 @@ import {
 } from 'lucide-react';
 
 // Reference date for date calculations (consistent with app timeline)
-const CURRENT_DATE_STR = '2026-08-24';
+// Date du jour réelle : une date figée ferait dériver les alertes d'entretien
+// (échéances jamais atteintes, ou toujours en retard) au fil du temps.
+const CURRENT_DATE_STR = new Date().toISOString().slice(0, 10);
 const CURRENT_DATE = new Date(CURRENT_DATE_STR);
 
 export interface MaintenanceInfo {
@@ -69,14 +71,50 @@ export function getVehicleMaintenanceInfo(vehicle: Vehicle): MaintenanceInfo | n
   };
 }
 
+/** Largeur maximale conservée : au-delà, une photo de catalogue n'apporte rien. */
+const MAX_IMAGE_WIDTH = 1600;
+const IMAGE_QUALITY = 0.82;
+
+/**
+ * Redimensionne et recompresse une photo dans le navigateur avant de l'encoder
+ * en base64. Une photo de téléphone (3 à 8 Mo) descend ainsi sous les 400 Ko :
+ * sans cela le corps de la requête dépasse la limite du serveur, qui coupe la
+ * connexion — le navigateur signale alors une erreur réseau trompeuse.
+ */
+async function compressImage(file: File): Promise<{ dataUrl: string; bytes: number }> {
+  const bitmap = await createImageBitmap(file);
+
+  const scale = Math.min(1, MAX_IMAGE_WIDTH / bitmap.width);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Canvas indisponible');
+
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+
+  const dataUrl = canvas.toDataURL('image/jpeg', IMAGE_QUALITY);
+  // La charge utile base64 pèse environ 4/3 des octets encodés.
+  const bytes = Math.round((dataUrl.length - dataUrl.indexOf(',') - 1) * 0.75);
+
+  return { dataUrl, bytes };
+}
+
 export const AdminFleet: React.FC = () => {
-  const { 
-    vehicles, 
-    addVehicle, 
-    updateVehicle, 
-    deleteVehicle, 
+  const {
+    vehicles,
+    subcontractors,
+    addVehicle,
+    updateVehicle,
+    deleteVehicle,
     updateVehicleStatus,
-    showToast 
+    sendVehicleToMaintenance,
+    completeVehicleMaintenance,
+    lastError,
+    clearLastError,
+    showToast
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -88,6 +126,7 @@ export const AdminFleet: React.FC = () => {
   // Modal State for Adding/Editing Vehicle
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
 
   // Form State
@@ -131,27 +170,31 @@ export const AdminFleet: React.FC = () => {
     { label: 'Range Rover Sport Luxe', url: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?auto=format&fit=crop&w=1000&q=80', cat: 'SUV VIP' }
   ];
 
-  const handleImageFileUpload = (file: File) => {
+  const handleImageFileUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       showToast('Format non supporté. Veuillez sélectionner une image (PNG, JPG, JPEG, WEBP).', 'error');
       return;
     }
-    if (file.size > 8 * 1024 * 1024) {
-      showToast('Image trop volumineuse. La taille maximale est de 8 Mo.', 'error');
+
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('Image trop volumineuse. La taille maximale est de 15 Mo.', 'error');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      if (result) {
-        setFormData((prev) => ({ ...prev, imageUrl: result }));
-        showToast(`Photo "${file.name}" importée avec succès !`, 'success');
-      }
-    };
-    reader.onerror = () => {
-      showToast('Erreur lors de la lecture du fichier image.', 'error');
-    };
-    reader.readAsDataURL(file);
+
+    try {
+      const optimized = await compressImage(file);
+      setFormData((prev) => ({ ...prev, imageUrl: optimized.dataUrl }));
+      setFormError(null);
+
+      const original = Math.round(file.size / 1024);
+      const compressed = Math.round(optimized.bytes / 1024);
+      showToast(
+        `Photo « ${file.name} » importée (${original} Ko → ${compressed} Ko).`,
+        'success'
+      );
+    } catch {
+      showToast("Impossible de traiter cette image. Essayez un autre fichier.", 'error');
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -171,7 +214,7 @@ export const AdminFleet: React.FC = () => {
     e.stopPropagation();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleImageFileUpload(e.dataTransfer.files[0]);
+      void handleImageFileUpload(e.dataTransfer.files[0]);
     }
   };
 
@@ -246,6 +289,8 @@ export const AdminFleet: React.FC = () => {
       lastMaintenanceDate: '2026-04-01',
       maintenanceNotes: 'Vidange moteur & contrôle système de freinage'
     });
+    setFormError(null);
+    clearLastError();
     setIsModalOpen(true);
   };
 
@@ -257,23 +302,75 @@ export const AdminFleet: React.FC = () => {
       lastMaintenanceDate: v.lastMaintenanceDate || '2026-03-01',
       maintenanceNotes: v.maintenanceNotes || ''
     });
+    setFormError(null);
+    clearLastError();
     setIsModalOpen(true);
   };
 
-  const handleSaveVehicle = (e: React.FormEvent) => {
+  /**
+   * Contrôle local reprenant les contraintes de l'API, pour signaler l'erreur
+   * dans le formulaire plutôt que de faire un aller-retour réseau inutile.
+   * Retourne le premier problème rencontré, ou `null` si la saisie est valide.
+   */
+  const validateVehicleForm = (data: Partial<Vehicle>): string | null => {
+    if (!data.brand?.trim()) return 'La marque est obligatoire.';
+    if (!data.model?.trim()) return 'Le modèle est obligatoire.';
+
+    if ((data.plateNumber?.trim().length ?? 0) < 3) {
+      return "L'immatriculation est obligatoire (3 caractères minimum).";
+    }
+
+    const maxYear = new Date().getFullYear() + 2;
+    if (!data.year || data.year < 1990 || data.year > maxYear) {
+      return `L'année doit être comprise entre 1990 et ${maxYear}.`;
+    }
+
+    if (!data.seats || data.seats < 1) return 'Le nombre de places doit être au moins 1.';
+    if (data.luggage === undefined || data.luggage < 0) {
+      return 'Le nombre de bagages ne peut pas être négatif.';
+    }
+
+    if (!data.dailyRate || data.dailyRate <= 0) {
+      return 'Le tarif journalier est obligatoire et doit être positif.';
+    }
+    if ((data.halfDayRate ?? 0) < 0 || (data.airportTransferRate ?? 0) < 0) {
+      return 'Les tarifs ne peuvent pas être négatifs.';
+    }
+
+    // L'API exige une URL exploitable (lien distant ou image importée en base64).
+    try {
+      new URL(data.imageUrl ?? '');
+    } catch {
+      return "La photo doit être un lien valide (https://…) ou une image importée.";
+    }
+
+    if (data.ownership === 'Sous-traitant' && !data.subcontractorId) {
+      return 'Sélectionnez le partenaire sous-traitant propriétaire du véhicule.';
+    }
+
+    return null;
+  };
+
+  const handleSaveVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.brand?.trim() || !formData.model?.trim() || !formData.dailyRate) {
-      showToast('Veuillez renseigner la marque, le modèle et le tarif journalier.', 'error');
+
+    const problem = validateVehicleForm(formData);
+    if (problem) {
+      setFormError(problem);
+      showToast(problem, 'error');
       return;
     }
 
-    if (editingVehicleId) {
-      updateVehicle(editingVehicleId, formData);
-      showToast(`Véhicule ${formData.brand} ${formData.model} mis à jour avec succès.`, 'success');
-    } else {
-      addVehicle(formData as Omit<Vehicle, 'id'>);
-    }
-    setIsModalOpen(false);
+    setFormError(null);
+    clearLastError();
+
+    const saved = editingVehicleId
+      ? await updateVehicle(editingVehicleId, formData)
+      : await addVehicle(formData as Omit<Vehicle, 'id'>);
+
+    // La fenêtre ne se ferme qu'en cas de succès : sinon la saisie serait perdue
+    // alors que le message d'erreur explique quoi corriger.
+    if (saved) setIsModalOpen(false);
   };
 
   const handleQuickStatusChange = (vehicleId: string, newStatus: VehicleStatus) => {
@@ -287,32 +384,18 @@ export const AdminFleet: React.FC = () => {
     }
   };
 
-  // Quick Action: Mark maintenance completed (resets nextMaintenanceDate + 6 months)
+  // Clôture les interventions ouvertes et planifie la révision semestrielle.
+  // Les dates d'entretien sont dérivées côté API des interventions réelles :
+  // elles ne peuvent pas être écrites directement sur le véhicule.
   const handleMarkMaintenanceDone = (vehicle: Vehicle) => {
-    const today = new Date(CURRENT_DATE_STR);
-    const lastMaint = CURRENT_DATE_STR;
-    
-    // Add 6 months for next scheduled maintenance
-    const nextMaintDate = new Date(today);
-    nextMaintDate.setMonth(nextMaintDate.getMonth() + 6);
-    const nextMaintStr = nextMaintDate.toISOString().split('T')[0];
-
-    updateVehicle(vehicle.id, {
-      status: 'Disponible',
-      lastMaintenanceDate: lastMaint,
-      nextMaintenanceDate: nextMaintStr,
-      maintenanceNotes: `Entretien validé le ${new Date().toLocaleDateString('fr-FR')} (Prochaine révision semestrielle)`
-    });
-
-    showToast(`Maintenance validée pour ${vehicle.brand} ${vehicle.model} (Prochain entretien : ${nextMaintStr})`, 'success');
+    void completeVehicleMaintenance(
+      vehicle.id,
+      `Entretien validé le ${new Date().toLocaleDateString('fr-FR')}`
+    );
   };
 
-  // Quick Action: Set vehicle to maintenance status
   const handleSendToMaintenance = (vehicle: Vehicle) => {
-    updateVehicle(vehicle.id, {
-      status: 'Entretien'
-    });
-    showToast(`${vehicle.brand} ${vehicle.model} envoyé en révision technique.`, 'warning');
+    void sendVehicleToMaintenance(vehicle.id, 'Envoi en révision technique depuis le back-office');
   };
 
   return (
@@ -811,6 +894,15 @@ export const AdminFleet: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveVehicle} className="space-y-4 text-xs">
+
+              {/* Motif du refus, conservé tant que la saisie n'est pas corrigée */}
+              {(formError ?? lastError) && (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-[11px] text-[#B3253F]">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span className="font-semibold">{formError ?? lastError}</span>
+                </div>
+              )}
+
               
               {/* Brand & Model */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -889,17 +981,35 @@ export const AdminFleet: React.FC = () => {
                 </div>
               </div>
 
-              {/* Partner Name (if subcontracted) */}
+              {/* Partenaire propriétaire, choisi parmi les sous-traitants enregistrés :
+                  le véhicule est rattaché à sa fiche, ce qui alimente le calcul de
+                  commission. Un nom saisi librement ne serait rattaché à rien. */}
               {formData.ownership === 'Sous-traitant' && (
                 <div>
-                  <label className="block uppercase font-bold text-slate-600 mb-1">Nom du Partenaire Sous-traitant</label>
-                  <input
-                    type="text"
-                    value={formData.partnerName || ''}
-                    onChange={(e) => setFormData({ ...formData, partnerName: e.target.value })}
-                    placeholder="Ex: Transport Ivoire Prestige, AutoRent..."
-                    className="w-full p-2.5 bg-blue-50/60 border border-blue-200 rounded-xl font-semibold text-slate-900"
-                  />
+                  <label className="block uppercase font-bold text-slate-600 mb-1">
+                    Partenaire Sous-traitant *
+                  </label>
+                  {subcontractors.length === 0 ? (
+                    <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2.5">
+                      Aucun partenaire enregistré. Créez-le d'abord dans « Chauffeurs &
+                      Partenaires ».
+                    </p>
+                  ) : (
+                    <select
+                      value={formData.subcontractorId || ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, subcontractorId: e.target.value || null })
+                      }
+                      className="w-full p-2.5 bg-blue-50/60 border border-blue-200 rounded-xl font-semibold text-slate-900"
+                    >
+                      <option value="">Sélectionner un partenaire…</option>
+                      {subcontractors.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} — commission {s.commissionRate} %
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               )}
 
@@ -1094,7 +1204,7 @@ export const AdminFleet: React.FC = () => {
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) handleImageFileUpload(file);
+                        if (file) void handleImageFileUpload(file);
                       }}
                     />
 

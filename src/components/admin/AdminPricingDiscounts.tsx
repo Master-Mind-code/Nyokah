@@ -17,19 +17,13 @@ import {
 } from 'lucide-react';
 
 export const AdminPricingDiscounts: React.FC = () => {
-  const { 
-    companies, 
-    updateCompanyDiscount, 
-    bookings, 
-    showToast 
-  } = useApp();
+  const { companies, updateCompanyDiscount, bookings, setAdminTab } = useApp();
 
   const [activeTab, setActiveTab] = useState<'corporate' | 'rules' | 'audit'>('corporate');
 
-  // Simulation of corporate discount edits
-  const handleDiscountChange = (companyId: string, newDiscount: number) => {
-    updateCompanyDiscount(companyId, newDiscount);
-    showToast(`Nouveau taux de remise appliqué à ${companies.find(c => c.id === companyId)?.name} : -${newDiscount}%`, 'success');
+  // La remise est persistée par l'API, qui synchronise aussi le code promo dédié.
+  const handleDiscountChange = async (companyId: string, newDiscount: number) => {
+    await updateCompanyDiscount(companyId, newDiscount);
   };
 
   const discountedBookings = bookings.filter((b) => b.discountAmount > 0);
@@ -117,7 +111,7 @@ export const AdminPricingDiscounts: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => showToast('Ajout de nouvelle société disponible dans l\'onglet "Clients Sociétés".', 'info')}
+              onClick={() => setAdminTab('companies')}
               className="text-xs font-bold text-[#795900] hover:underline"
             >
               + Gérer les comptes entreprises
@@ -166,7 +160,7 @@ export const AdminPricingDiscounts: React.FC = () => {
                     </td>
 
                     <td className="py-4 px-4 font-semibold text-slate-800">
-                      {c.activeBookingsCount} missions
+                      {c.totalBookings} missions
                     </td>
 
                     <td className="py-4 px-4 font-bold text-emerald-600">
@@ -197,89 +191,23 @@ export const AdminPricingDiscounts: React.FC = () => {
       )}
 
       {/* TAB 2: Volume & Duration Rules */}
+      {/* TAB 2 : renvoi vers les paramètres, seule source de vérité des règles */}
       {activeTab === 'rules' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-            <h3 className="font-serif font-bold text-base text-slate-900">
-              Règles de Dégressivité par Durée de Mission
-            </h3>
-            <p className="text-xs text-slate-500">
-              Ces remises s'appliquent automatiquement pour les longues durées lorsqu'aucune remise société supérieure n'est active.
-            </p>
-
-            <div className="space-y-3 pt-2">
-              <div className="p-3.5 rounded-2xl bg-[#F9F9FD] border border-slate-200 flex justify-between items-center">
-                <div>
-                  <div className="font-bold text-slate-900 text-xs">Mission 3 à 6 jours consécutifs</div>
-                  <div className="text-[10px] text-slate-500">Ex: Séminaires, missions Yamoussoukro</div>
-                </div>
-                <span className="px-3 py-1 rounded-full bg-[#D4A017]/20 text-[#795900] font-bold text-xs">
-                  -5% automatique
-                </span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#F9F9FD] border border-slate-200 flex justify-between items-center">
-                <div>
-                  <div className="font-bold text-slate-900 text-xs">Mission 7 à 14 jours consécutifs</div>
-                  <div className="text-[10px] text-slate-500">Ex: Audits, missions intérieures du pays</div>
-                </div>
-                <span className="px-3 py-1 rounded-full bg-[#D4A017]/20 text-[#795900] font-bold text-xs">
-                  -10% automatique
-                </span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#F9F9FD] border border-slate-200 flex justify-between items-center">
-                <div>
-                  <div className="font-bold text-slate-900 text-xs">Location Mensuelle (30 jours+)</div>
-                  <div className="text-[10px] text-slate-500">Flotte dédiée avec chauffeur titulaire</div>
-                </div>
-                <span className="px-3 py-1 rounded-full bg-[#D4A017]/20 text-[#795900] font-bold text-xs">
-                  -20% forfaitisé
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-            <h3 className="font-serif font-bold text-base text-slate-900">
-              Codes Promotionnels & Campagnes Événementielles
-            </h3>
-            <p className="text-xs text-slate-500">
-              Codes activables lors de sommets ou salons professionnels à Abidjan (ex: FICAD, Africa CEO Forum).
-            </p>
-
-            <div className="space-y-3 pt-2">
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex justify-between items-center">
-                <div>
-                  <span className="font-mono font-bold text-slate-900 text-xs">CORP15</span>
-                  <div className="text-[10px] text-slate-500">Grand Compte Standard (-15%)</div>
-                </div>
-                <span className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                  Actif (14 utilisations)
-                </span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex justify-between items-center">
-                <div>
-                  <span className="font-mono font-bold text-slate-900 text-xs">SUMMIT20</span>
-                  <div className="text-[10px] text-slate-500">Sommets Internationaux (-20%)</div>
-                </div>
-                <span className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                  Actif (6 utilisations)
-                </span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex justify-between items-center">
-                <div>
-                  <span className="font-mono font-bold text-slate-900 text-xs">WELCOME10</span>
-                  <div className="text-[10px] text-slate-500">Première réservation entreprise (-10%)</div>
-                </div>
-                <span className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                  Actif (28 utilisations)
-                </span>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 sm:p-8 space-y-4">
+          <h3 className="font-serif font-bold text-lg text-slate-900">
+            Règles de dégressivité & codes promotionnels
+          </h3>
+          <p className="text-xs text-slate-500 max-w-2xl">
+            Les paliers de remise volume, les coefficients de formule et les codes promotionnels se
+            configurent depuis l'onglet Paramètres. Les valeurs qui y figurent sont celles
+            réellement appliquées par le moteur tarifaire.
+          </p>
+          <button
+            onClick={() => setAdminTab('settings')}
+            className="px-5 py-2.5 bg-[#795900] text-white rounded-xl text-xs font-bold hover:bg-[#5c4300] transition-colors"
+          >
+            Ouvrir les paramètres de tarification
+          </button>
         </div>
       )}
 
@@ -311,7 +239,7 @@ export const AdminPricingDiscounts: React.FC = () => {
               <tbody className="divide-y divide-slate-100">
                 {discountedBookings.map((b) => (
                   <tr key={b.id} className="hover:bg-slate-50">
-                    <td className="py-3 px-3 font-mono font-bold text-slate-900">{b.id}</td>
+                    <td className="py-3 px-3 font-mono font-bold text-slate-900">{b.reference}</td>
                     <td className="py-3 px-3 font-semibold text-slate-800">{b.clientName}</td>
                     <td className="py-3 px-3 text-slate-600">{b.vehicleName}</td>
                     <td className="py-3 px-3">

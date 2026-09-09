@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export const AdminCompanies: React.FC = () => {
-  const { companies, setCompanies, showToast } = useApp();
+  const { companies, addCompany, updateCompany, deleteCompany, isSyncing, showToast } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export const AdminCompanies: React.FC = () => {
     contactPhone: '',
     negotiatedDiscountRate: 15,
     promoCode: 'CORP15',
-    status: 'Grand Compte',
+    status: 'VIP Contractuel',
     accountManager: 'Kouamé N\'Guessan'
   });
 
@@ -39,7 +39,7 @@ export const AdminCompanies: React.FC = () => {
       const q = searchQuery.toLowerCase();
       const matchName = c.name.toLowerCase().includes(q);
       const matchContact = c.contactName.toLowerCase().includes(q);
-      const matchCode = c.promoCode.toLowerCase().includes(q);
+      const matchCode = (c.promoCode ?? '').toLowerCase().includes(q);
       if (!matchName && !matchContact && !matchCode) return false;
     }
     return true;
@@ -55,7 +55,7 @@ export const AdminCompanies: React.FC = () => {
       contactPhone: '+225 07 ',
       negotiatedDiscountRate: 12,
       promoCode: `B2B${Math.floor(10 + Math.random() * 90)}`,
-      status: 'PME Privée',
+      status: 'Standard B2B',
       accountManager: 'Kouamé N\'Guessan'
     });
     setIsModalOpen(true);
@@ -67,41 +67,34 @@ export const AdminCompanies: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.contactName) {
       showToast('Veuillez remplir les champs obligatoires.', 'error');
       return;
     }
 
-    if (editingId) {
-      setCompanies((prev) => prev.map((c) => c.id === editingId ? { ...c, ...formData } as Company : c));
-      showToast(`Société ${formData.name} mise à jour.`, 'success');
-    } else {
-      const newCompany: Company = {
-        id: `comp-${Date.now()}`,
-        name: formData.name!,
-        tradeRegister: formData.tradeRegister || 'CI-ABJ-2026-B-9999',
-        contactName: formData.contactName!,
+    const saved = editingId
+      ? await updateCompany(editingId, formData)
+      : await addCompany({
+        name: formData.name,
+        tradeRegister: formData.tradeRegister || `CI-ABJ-${new Date().getFullYear()}-B-9999`,
+        contactName: formData.contactName,
         contactEmail: formData.contactEmail || 'contact@societe.ci',
         contactPhone: formData.contactPhone || '+225 07 00 00 00 00',
-        negotiatedDiscountRate: formData.negotiatedDiscountRate || 10,
-        promoCode: formData.promoCode || 'PROMO10',
-        monthlyVolumeTarget: 5,
-        totalBookings: 0,
-        totalSpent: 0,
-        status: formData.status as any || 'Standard B2B',
-        accountManager: formData.accountManager || 'Kouamé N\'Guessan'
-      };
-      setCompanies((prev) => [...prev, newCompany]);
-      showToast(`Nouvelle société ${newCompany.name} créée avec -${newCompany.negotiatedDiscountRate}% de rabais.`, 'success');
-    }
-    setIsModalOpen(false);
+        negotiatedDiscountRate: formData.negotiatedDiscountRate ?? 10,
+        promoCode: formData.promoCode || null,
+        monthlyVolumeTarget: formData.monthlyVolumeTarget ?? 5,
+        status: formData.status ?? 'Standard B2B',
+          accountManager: formData.accountManager || 'Kouamé N\'Guessan'
+        });
+
+    // Formulaire conservé si l'API refuse (RCCM ou code promo déjà pris).
+    if (saved) setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setCompanies((prev) => prev.filter((c) => c.id !== id));
-    showToast('Compte entreprise supprimé.', 'info');
+  const handleDelete = async (id: string) => {
+    await deleteCompany(id);
   };
 
   return (

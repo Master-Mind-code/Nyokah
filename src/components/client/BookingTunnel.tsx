@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp, formatFCFA } from '../../context/AppContext';
-import { RentalFormula, Booking } from '../../types';
+import { ApiError } from '../../api/client';
+import { RentalFormula, Booking, PriceQuote } from '../../types';
 import { 
   Check, 
   ArrowLeft, 
@@ -24,31 +25,94 @@ import {
 } from 'lucide-react';
 
 export const BookingTunnel: React.FC = () => {
-  const { 
-    vehicles, 
-    companies, 
-    currentCompanyId, 
+  const {
+    vehicles,
+    companies,
+    currentCompanyId,
     setCurrentCompanyId,
-    bookingDraft, 
-    setBookingDraft, 
-    calculatePrice, 
-    submitBooking, 
-    setClientTab, 
+    bookingDraft,
+    setBookingDraft,
+    requestQuote,
+    submitBooking,
+    setClientTab,
     setRole,
     showToast,
     currentUser,
     openAuthModal
   } = useApp();
 
-  const [currentStep, setCurrentStep] = useState<number>(4); // Default to Step 4 as in Image 3 mockup for presentation, but user can click any step
+  const [currentStep, setCurrentStep] = useState<number>(1);
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
-  const [promoInput, setPromoInput] = useState<string>(bookingDraft.promoCode || 'CORP15');
-  const [promoAppliedMessage, setPromoAppliedMessage] = useState<string>('Code appliqué avec succès.');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [promoInput, setPromoInput] = useState<string>(bookingDraft.promoCode || '');
+  const [promoAppliedMessage, setPromoAppliedMessage] = useState<string>('');
   const [promoError, setPromoError] = useState<string>('');
 
-  const selectedVehicle = vehicles.find((v) => v.id === bookingDraft.vehicleId) || vehicles[3] || vehicles[0];
-  const price = calculatePrice({ ...bookingDraft, promoCode: promoInput }, selectedVehicle, currentCompanyId);
+  const selectedVehicle = vehicles.find((v) => v.id === bookingDraft.vehicleId) ?? null;
   const activeCompany = companies.find((c) => c.id === currentCompanyId);
+
+  // Devis calculé par l'API. Le frontend n'effectue aucun calcul de prix : il
+  // interroge le serveur à chaque changement du brouillon, avec un léger délai
+  // pour ne pas envoyer une requête à chaque frappe.
+  const [quote, setQuote] = useState<PriceQuote | null>(null);
+  const [isQuoting, setIsQuoting] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedVehicle) {
+      setQuote(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      setIsQuoting(true);
+      requestQuote({ ...bookingDraft, promoCode: promoInput }, controller.signal)
+        .then((result) => {
+          setQuote(result);
+          setQuoteError(null);
+
+          // Le serveur indique si le code saisi a réellement été retenu.
+          if (promoInput.trim()) {
+            const promoApplied = result.discountCandidates.some((c) => c.source === 'promo');
+            if (promoApplied) {
+              setPromoAppliedMessage(`Code « ${promoInput.trim().toUpperCase()} » appliqué.`);
+              setPromoError('');
+            } else {
+              setPromoAppliedMessage('');
+              setPromoError(result.discountReason || "Ce code n'est pas applicable à cette réservation.");
+            }
+          } else {
+            setPromoAppliedMessage('');
+            setPromoError('');
+          }
+        })
+        .catch((error: unknown) => {
+          if ((error as Error)?.name === 'AbortError') return;
+          setQuote(null);
+          setQuoteError(
+            error instanceof ApiError ? error.message : 'Impossible de calculer le tarif.'
+          );
+        })
+        .finally(() => setIsQuoting(false));
+    }, 350);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    bookingDraft.vehicleId,
+    bookingDraft.startDate,
+    bookingDraft.endDate,
+    bookingDraft.formula,
+    bookingDraft.fuelIncluded,
+    promoInput,
+    currentCompanyId,
+    selectedVehicle,
+    requestQuote,
+    bookingDraft
+  ]);
 
   const formulas: RentalFormula[] = [
     'Journée (8h-18h)',
@@ -58,6 +122,8 @@ export const BookingTunnel: React.FC = () => {
     'Mise à disposition mensuelle'
   ];
 
+  // Le code est vérifié par le serveur lors du recalcul du devis ; ce bouton
+  // ne fait que le reporter dans le brouillon de réservation.
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!promoInput.trim()) {
@@ -65,17 +131,27 @@ export const BookingTunnel: React.FC = () => {
       setPromoAppliedMessage('');
       return;
     }
-
     setBookingDraft((prev) => ({ ...prev, promoCode: promoInput.trim() }));
-    setPromoError('');
-    setPromoAppliedMessage(`Code "${promoInput.toUpperCase()}" vérifié et appliqué.`);
-    showToast(`Code promo "${promoInput.toUpperCase()}" appliqué au calcul !`, 'success');
   };
 
-  const handleConfirmReservation = () => {
-    const booking = submitBooking();
-    setConfirmedBooking(booking);
-    setCurrentStep(5); // Success confirmation
+  const handleConfirmReservation = async () => {
+    if (!selectedVehicle || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      setBookingDraft((prev) => ({ ...prev, promoCode: promoInput.trim() }));
+      const booking = await submitBooking();
+      setConfirmedBooking(booking);
+      setCurrentStep(5);
+    } catch (error) {
+      // Indisponibilité, code promo expiré, session perdue : le message vient de l'API.
+      showToast(
+        error instanceof ApiError ? error.message : 'La réservation n’a pas pu être enregistrée.',
+        'error'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Get initials for avatar
@@ -86,16 +162,44 @@ export const BookingTunnel: React.FC = () => {
     return name.substring(0, 2).toUpperCase();
   };
 
+  // Aucun véhicule retenu : on renvoie l'utilisateur vers le catalogue plutôt
+  // que d'en choisir un arbitrairement à sa place.
+  if (!selectedVehicle && currentStep !== 5) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-5">
+        <div className="w-16 h-16 rounded-2xl bg-[#F3E5AB] text-[#795900] flex items-center justify-center mx-auto">
+          <Car className="w-8 h-8" />
+        </div>
+        <h1 className="text-2xl font-bold font-serif text-[#1A1C1F]">
+          Choisissez d'abord un véhicule
+        </h1>
+        <p className="text-sm text-slate-600">
+          Parcourez notre flotte et sélectionnez le véhicule qui correspond à votre mission pour
+          démarrer votre réservation.
+        </p>
+        <button
+          onClick={() => setClientTab('catalog')}
+          className="px-6 py-3 bg-[#795900] text-white rounded-xl text-sm font-bold hover:bg-[#5c4300] transition-colors inline-flex items-center gap-2"
+        >
+          <span>Voir le catalogue</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      
+
       {/* Header section matching Image 3.png */}
       <div className="text-center mb-8">
         <h1 className="text-2xl sm:text-4xl font-bold font-serif text-[#1A1C1F] mb-1">
           Finalisation de la réservation
         </h1>
         <p className="text-sm font-medium text-slate-600">
-          {selectedVehicle.brand} {selectedVehicle.model} ({selectedVehicle.year})
+          {selectedVehicle
+            ? `${selectedVehicle.brand} ${selectedVehicle.model} (${selectedVehicle.year})`
+            : confirmedBooking?.vehicleName}
         </p>
       </div>
 
@@ -609,14 +713,21 @@ export const BookingTunnel: React.FC = () => {
                 Résumé du prix
               </h3>
 
-              {/* Breakdown lines */}
-              <div className="space-y-3 text-sm">
+              {/* Détail du devis renvoyé par l'API */}
+              {quoteError && (
+                <div className="flex items-start gap-2 text-xs text-[#E94560] bg-red-50 border border-red-200 rounded-xl p-3">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{quoteError}</span>
+                </div>
+              )}
+
+              <div className={`space-y-3 text-sm transition-opacity ${isQuoting ? 'opacity-50' : ''}`}>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-600">
-                    Prix de base ({price.durationDays} jour{price.durationDays > 1 ? 's' : ''})
+                    Prix de base ({quote?.durationDays ?? 0} jour{(quote?.durationDays ?? 0) > 1 ? 's' : ''})
                   </span>
                   <span className="font-semibold text-slate-900">
-                    {formatFCFA(price.basePrice)}
+                    {formatFCFA(quote?.basePrice ?? 0)}
                   </span>
                 </div>
 
@@ -625,19 +736,21 @@ export const BookingTunnel: React.FC = () => {
                     Formule & Carburant
                   </span>
                   <span className="font-semibold text-slate-900">
-                    {price.fuelOptionCost > 0 ? formatFCFA(price.fuelOptionCost) : 'Inclus dans formule'}
+                    {(quote?.fuelOptionCost ?? 0) > 0
+                      ? formatFCFA(quote!.fuelOptionCost)
+                      : 'Inclus dans formule'}
                   </span>
                 </div>
 
-                {/* Remise Société line in Gold / Green with verified check icon */}
-                {price.discountAmount > 0 && (
+                {/* Remise retenue par le moteur tarifaire */}
+                {(quote?.discountAmount ?? 0) > 0 && (
                   <div className="flex justify-between items-center text-[#795900] bg-amber-50/70 p-2.5 rounded-xl border border-amber-200">
                     <span className="font-semibold text-xs flex items-center gap-1.5">
                       <CheckCircle2 className="w-4 h-4 text-[#D4A017] shrink-0" />
-                      <span>{price.discountReason}</span>
+                      <span>{quote!.discountReason}</span>
                     </span>
                     <span className="font-bold text-xs">
-                      - {formatFCFA(price.discountAmount)}
+                      - {formatFCFA(quote!.discountAmount)}
                     </span>
                   </div>
                 )}
@@ -651,10 +764,11 @@ export const BookingTunnel: React.FC = () => {
                   </span>
                   <div className="text-right">
                     <div className="text-2xl sm:text-3xl font-bold font-serif text-[#795900]">
-                      {formatFCFA(price.totalTTC)}
+                      {isQuoting && !quote ? 'Calcul…' : formatFCFA(quote?.totalAmount ?? 0)}
                     </div>
                     <span className="text-[10px] text-slate-500 block">
-                      TVA (18%) incluse ({formatFCFA(price.taxAmount)})
+                      TVA ({Math.round((quote?.taxRate ?? 0.18) * 100)}%) incluse (
+                      {formatFCFA(quote?.taxAmount ?? 0)})
                     </span>
                   </div>
                 </div>
@@ -697,10 +811,13 @@ export const BookingTunnel: React.FC = () => {
               {/* Action Buttons matching Image 3.png */}
               <div className="space-y-2.5 pt-2">
                 <button
-                  onClick={handleConfirmReservation}
-                  className="w-full bg-[#795900] text-white font-bold text-xs sm:text-sm py-3.5 rounded-xl hover:bg-[#5c4300] transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                  onClick={() => void handleConfirmReservation()}
+                  disabled={isSubmitting || isQuoting || !quote}
+                  className="w-full bg-[#795900] text-white font-bold text-xs sm:text-sm py-3.5 rounded-xl hover:bg-[#5c4300] transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <span>Confirmer la réservation</span>
+                  <span>
+                    {isSubmitting ? 'Enregistrement en cours…' : 'Confirmer la réservation'}
+                  </span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
@@ -733,7 +850,7 @@ export const BookingTunnel: React.FC = () => {
               Merci pour votre confiance, {confirmedBooking.clientName}
             </h2>
             <div className="inline-block bg-[#1A1A2E] text-[#D4A017] px-4 py-1.5 rounded-full font-mono text-sm font-bold shadow-xs">
-              Référence : {confirmedBooking.id}
+              Référence : {confirmedBooking.reference}
             </div>
           </div>
 

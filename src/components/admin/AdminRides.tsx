@@ -67,8 +67,8 @@ export const AdminRides: React.FC = () => {
                       <Navigation className="w-4 h-4" />
                     </div>
                     <div>
-                      <span className="text-xs font-mono font-bold text-slate-900">{ride.id}</span>
-                      <span className="text-[10px] text-slate-500 block">Réf : {ride.bookingId}</span>
+                      <span className="text-xs font-mono font-bold text-slate-900">{ride.reference}</span>
+                      <span className="text-[10px] text-slate-500 block">Réf : {ride.bookingReference}</span>
                     </div>
                   </div>
 

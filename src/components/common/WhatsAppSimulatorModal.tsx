@@ -31,8 +31,6 @@ export const WhatsAppSimulatorModal: React.FC = () => {
     openWhatsAppSimulator,
     markWhatsAppNotificationAsRead,
     markAllWhatsAppNotificationsAsRead,
-    simulateBookingValidationNotification,
-    simulateDriverAssignmentNotification,
     bookings,
     currentUser,
     showToast
@@ -137,27 +135,12 @@ export const WhatsAppSimulatorModal: React.FC = () => {
             </button>
           </div>
 
-          {/* Quick Simulation Bar */}
-          <div className="p-2.5 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between text-xs">
-            <span className="text-slate-400 font-medium">Tests en direct :</span>
-            <div className="flex gap-1.5">
-              <button
-                onClick={() => targetBooking && simulateBookingValidationNotification(targetBooking.id)}
-                className="px-2 py-1 bg-emerald-700/60 hover:bg-emerald-600 text-emerald-100 rounded text-[11px] font-medium transition flex items-center gap-1"
-                title="Déclencher simulation validation de réservation"
-              >
-                <Sparkles className="w-3 h-3 text-emerald-300" />
-                Validation
-              </button>
-              <button
-                onClick={() => targetBooking && simulateDriverAssignmentNotification(targetBooking.id)}
-                className="px-2 py-1 bg-blue-700/60 hover:bg-blue-600 text-blue-100 rounded text-[11px] font-medium transition flex items-center gap-1"
-                title="Déclencher simulation affectation chauffeur"
-              >
-                <Car className="w-3 h-3 text-blue-300" />
-                Chauffeur
-              </button>
-            </div>
+          {/* Origine des messages : ils sont désormais émis par l'API, pas simulés ici */}
+          <div className="p-2.5 bg-slate-900/60 border-b border-slate-800 flex items-center gap-2 text-xs">
+            <Sparkles className="w-3 h-3 text-emerald-300 shrink-0" />
+            <span className="text-slate-400 font-medium">
+              Messages envoyés automatiquement par Nyokah à chaque étape de votre réservation.
+            </span>
           </div>
 
           {/* Threads List */}

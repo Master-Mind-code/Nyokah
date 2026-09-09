@@ -26,12 +26,105 @@ import { AdminPacks } from './components/admin/AdminPacks';
 import { AdminCompanies } from './components/admin/AdminCompanies';
 import { AdminDriversPartners } from './components/admin/AdminDriversPartners';
 import { AdminRides } from './components/admin/AdminRides';
+import { AdminSettings } from './components/admin/AdminSettings';
 
+import { Car } from 'lucide-react';
+import { ErrorPage } from './components/common/ErrorPage';
 import { Vehicle } from './types';
 
+/** Écran d'attente pendant la restauration de session et le chargement du catalogue. */
+const BootScreen: React.FC = () => (
+  <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#F9F9FD]">
+    <div className="w-12 h-12 rounded-2xl bg-[#0B132B] text-[#D4A017] flex items-center justify-center animate-pulse">
+      <Car className="w-6 h-6" />
+    </div>
+    <p className="text-sm font-semibold text-slate-600">Chargement de Nyokah Mobility…</p>
+  </div>
+);
+
 const MainAppContent: React.FC = () => {
-  const { role, clientTab, adminTab, startBookingForVehicle, currentUser } = useApp();
+  const {
+    role,
+    setRole,
+    clientTab,
+    adminTab,
+    startBookingForVehicle,
+    currentUser,
+    isBootstrapping,
+    connectionError,
+    appError,
+    clearAppError,
+    openAuthModal,
+    refreshAll
+  } = useApp();
   const [selectedVehicleForModal, setSelectedVehicleForModal] = useState<Vehicle | null>(null);
+
+  if (isBootstrapping) return <BootScreen />;
+
+  /**
+   * Les pages d'erreur conservent la fenêtre de connexion et les messages :
+   * sans cela, le bouton « Se reconnecter » n'ouvrirait rien et l'utilisateur
+   * resterait bloqué sur l'écran d'incident.
+   */
+  const errorScreen = (page: React.ReactNode) => (
+    <>
+      <Toast />
+      <AuthModal />
+      {page}
+    </>
+  );
+
+  // L'API est injoignable dès le démarrage : sans elle il n'y a rien à afficher.
+  if (connectionError) {
+    return errorScreen(
+      <ErrorPage
+        kind="offline"
+        detail={connectionError}
+        primaryAction={{ label: 'Réessayer', onClick: () => void refreshAll() }}
+      />
+    );
+  }
+
+  // Incident survenu en cours d'utilisation.
+  if (appError) {
+    const retry = async () => {
+      clearAppError();
+      await refreshAll();
+    };
+
+    return errorScreen(
+      <ErrorPage
+        kind={appError.kind}
+        detail={appError.detail}
+        requestId={appError.requestId}
+        primaryAction={
+          appError.kind === 'session-expired'
+            ? { label: 'Se reconnecter', onClick: () => openAuthModal('login') }
+            : { label: 'Réessayer', onClick: () => void retry() }
+        }
+        secondaryAction={{ label: 'Retour à l’accueil', onClick: () => void retry() }}
+      />
+    );
+  }
+
+  // Espace d'administration demandé sans les droits correspondants.
+  if (role === 'admin' && currentUser?.type !== 'admin') {
+    return errorScreen(
+      <ErrorPage
+        kind="forbidden"
+        detail={
+          currentUser
+            ? `Connecté en tant que ${currentUser.fullName} (${currentUser.type}).`
+            : 'Aucune session active.'
+        }
+        primaryAction={{
+          label: 'Se connecter en administrateur',
+          onClick: () => openAuthModal('login')
+        }}
+        secondaryAction={{ label: 'Retour à l’espace client', onClick: () => setRole('client') }}
+      />
+    );
+  }
 
   const handleOpenVehicleModal = (vehicle: Vehicle) => {
     setSelectedVehicleForModal(vehicle);
@@ -65,7 +158,7 @@ const MainAppContent: React.FC = () => {
         onBook={handleBookFromModal}
       />
 
-      {role === 'admin' && currentUser?.type === 'admin' ? (
+      {role === 'admin' ? (
         // ADMIN BACK-OFFICE SPACE (Secured: Only authenticated Super-Admin)
         <AdminLayout>
           {adminTab === 'dashboard' && <AdminDashboard />}
@@ -76,6 +169,7 @@ const MainAppContent: React.FC = () => {
           {adminTab === 'companies' && <AdminCompanies />}
           {adminTab === 'drivers-partners' && <AdminDriversPartners />}
           {adminTab === 'rides' && <AdminRides />}
+          {adminTab === 'settings' && <AdminSettings />}
         </AdminLayout>
       ) : (
         // CLIENT SPACE (Default for visitors & non-admin users)

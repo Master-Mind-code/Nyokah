@@ -9,7 +9,8 @@ import {
   Percent, 
   Building2, 
   UserCheck, 
-  Navigation, 
+  Navigation,
+  SlidersHorizontal, 
   ArrowLeftRight, 
   Menu, 
   X,
@@ -48,7 +49,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     { id: 'packs', label: 'Packs Auto', icon: <Package className="w-4 h-4" /> },
     { id: 'companies', label: 'Clients Sociétés', icon: <Building2 className="w-4 h-4" /> },
     { id: 'drivers-partners', label: 'Chauffeurs & Partenaires', icon: <UserCheck className="w-4 h-4" /> },
-    { id: 'rides', label: 'Courses du Jour', icon: <Navigation className="w-4 h-4" />, badge: activeRidesCount }
+    { id: 'rides', label: 'Courses du Jour', icon: <Navigation className="w-4 h-4" />, badge: activeRidesCount },
+    { id: 'settings', label: 'Paramètres', icon: <SlidersHorizontal className="w-4 h-4" /> }
   ];
 
   return (

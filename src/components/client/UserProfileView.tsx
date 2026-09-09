@@ -27,10 +27,25 @@ import {
   Info
 } from 'lucide-react';
 
+/** Horodatage ISO de l'API → « 09/09/2026 à 14:54 ». */
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
 export const UserProfileView: React.FC = () => {
-  const { 
-    currentUser, 
-    logout, 
+  const {
+    currentUser,
+    showToast,
+    logout,
     openAuthModal, 
     updateUserProfile, 
     addFavoriteAddress, 
@@ -40,8 +55,9 @@ export const UserProfileView: React.FC = () => {
     formatFCFA,
     whatsAppNotifications,
     openWhatsAppSimulator,
-    simulateBookingValidationNotification,
-    simulateDriverAssignmentNotification,
+    payBooking,
+    cancelBooking,
+    isSyncing,
     unreadWhatsAppCount
   } = useApp();
 
@@ -406,7 +422,8 @@ export const UserProfileView: React.FC = () => {
                     {whatsAppNotifications[0].title}
                   </span>
                   <span className="text-slate-500 truncate hidden md:inline">
-                    ({whatsAppNotifications[0].bookingId} • {whatsAppNotifications[0].vehicleName})
+                    ({whatsAppNotifications[0].bookingReference ?? '—'} •{' '}
+                    {whatsAppNotifications[0].vehicleName})
                   </span>
                 </div>
 
@@ -450,7 +467,7 @@ export const UserProfileView: React.FC = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs font-bold text-slate-900">
-                              {b.id}
+                              {b.reference}
                             </span>
                             <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                               b.status === 'Confirmée'
@@ -537,31 +554,38 @@ export const UserProfileView: React.FC = () => {
                             <span>Voir sur WhatsApp</span>
                           </button>
 
-                          {/* Trigger test simulations */}
-                          <button
-                            onClick={() => simulateBookingValidationNotification(b.id)}
-                            title="Simuler la validation par WhatsApp"
-                            className="px-2.5 py-1.5 bg-white border border-slate-300 hover:border-emerald-500 text-slate-700 hover:text-emerald-700 rounded-lg text-xs font-semibold transition"
-                          >
-                            ⚡ Valider
-                          </button>
-                          <button
-                            onClick={() => simulateDriverAssignmentNotification(b.id)}
-                            title="Simuler l'affectation de chauffeur par WhatsApp"
-                            className="px-2.5 py-1.5 bg-white border border-slate-300 hover:border-blue-500 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-semibold transition"
-                          >
-                            ⚡ Chauffeur
-                          </button>
+                          {/* Actions réelles sur la réservation */}
+                          {(b.balanceDue ?? 0) > 0 && b.status !== 'Annulée' && (
+                            <button
+                              onClick={() => void payBooking(b.id)}
+                              disabled={isSyncing}
+                              title={`Régler le solde de ${formatFCFA(b.balanceDue ?? 0)}`}
+                              className="px-2.5 py-1.5 bg-white border border-slate-300 hover:border-emerald-500 text-slate-700 hover:text-emerald-700 rounded-lg text-xs font-semibold transition disabled:opacity-50 disabled:cursor-wait"
+                            >
+                              Payer {formatFCFA(b.balanceDue ?? 0)}
+                            </button>
+                          )}
+
+                          {(b.status === 'En attente' || b.status === 'Confirmée') && (
+                            <button
+                              onClick={() => void cancelBooking(b.id, 'Annulation depuis l’espace client')}
+                              disabled={isSyncing}
+                              title="Annuler cette réservation"
+                              className="px-2.5 py-1.5 bg-white border border-slate-300 hover:border-red-500 text-slate-700 hover:text-red-700 rounded-lg text-xs font-semibold transition disabled:opacity-50 disabled:cursor-wait"
+                            >
+                              Annuler
+                            </button>
+                          )}
                         </div>
                       </div>
 
                       <div className="flex justify-between items-center pt-2">
                         <span className="text-[11px] text-slate-400">
-                          Créée le {b.createdAt}
+                          Créée le {formatDateTime(b.createdAt)}
                         </span>
 
                         <button
-                          onClick={() => alert(`Téléchargement de la facture proforma pour la réservation ${b.id}...`)}
+                          onClick={() => showToast(`La facture de la réservation ${b.reference} est émise à la clôture de la mission.`, 'info')}
                           className="text-xs text-[#795900] font-bold hover:underline flex items-center gap-1"
                         >
                           <Receipt className="w-3.5 h-3.5" />

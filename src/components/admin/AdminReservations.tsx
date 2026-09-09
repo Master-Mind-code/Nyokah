@@ -166,7 +166,7 @@ export const AdminReservations: React.FC = () => {
                   return (
                     <tr key={b.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
-                        {b.id}
+                        {b.reference}
                       </td>
 
                       <td className="py-3.5 px-4">
@@ -282,7 +282,7 @@ export const AdminReservations: React.FC = () => {
                   Affectation Chauffeur & Véhicule
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Mission {modalBooking.id} • {modalBooking.clientName}
+                  Mission {modalBooking.reference} • {modalBooking.clientName}
                 </p>
               </div>
               <button 
@@ -377,7 +377,7 @@ export const AdminReservations: React.FC = () => {
               <div>
                 <span className="text-xs uppercase font-bold text-[#795900]">Fiche Réservation</span>
                 <h3 className="font-serif font-bold text-xl text-slate-900">
-                  {selectedBooking.id}
+                  {selectedBooking.reference}
                 </h3>
               </div>
               <button 
@@ -429,7 +429,7 @@ export const AdminReservations: React.FC = () => {
             <div className="flex justify-between items-center pt-3 border-t border-slate-100">
               <button
                 onClick={() => {
-                  showToast(`Téléchargement du bordereau de mission ${selectedBooking.id}.pdf`, 'info');
+                  showToast(`Bordereau de mission ${selectedBooking.reference} : export PDF à venir.`, 'info');
                 }}
                 className="text-xs font-bold text-slate-700 hover:underline flex items-center gap-1"
               >

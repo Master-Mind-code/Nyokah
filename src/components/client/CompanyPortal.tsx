@@ -46,11 +46,12 @@ export const CompanyPortal: React.FC = () => {
     return true;
   });
 
-  const totalSpent = companyBookings.reduce((sum, b) => sum + (b.status !== 'Annulée' ? b.totalAmount : 0), 0);
+  // Les dépenses totales viennent de l'API (calculées sur tout l'historique) ;
+  // les économies sont sommées sur les réservations chargées.
   const totalSaved = companyBookings.reduce((sum, b) => sum + b.discountAmount, 0);
 
-  const handleDownloadInvoice = (bookingId: string) => {
-    showToast(`Téléchargement de la facture pro-forma ${bookingId}.pdf simulé.`, 'info');
+  const handleDownloadInvoice = (reference: string) => {
+    showToast(`Facture de la réservation ${reference} : export PDF à venir.`, 'info');
   };
 
   return (
@@ -124,7 +125,7 @@ export const CompanyPortal: React.FC = () => {
             Dépenses Totales Année
           </div>
           <div className="text-2xl font-bold font-serif text-slate-900">
-            {formatFCFA(totalSpent || activeCompany.totalSpent)}
+            {formatFCFA(activeCompany.totalSpent)}
           </div>
           <p className="text-[11px] text-slate-500 mt-2">
             Facturation centralisée consolidée
@@ -137,7 +138,7 @@ export const CompanyPortal: React.FC = () => {
             Économies Réalisées
           </div>
           <div className="text-2xl font-bold font-serif text-emerald-600">
-            {formatFCFA(totalSaved || 1250000)}
+            {formatFCFA(totalSaved)}
           </div>
           <p className="text-[11px] text-slate-500 mt-2">
             Grâce aux remises accords-cadres
@@ -153,9 +154,11 @@ export const CompanyPortal: React.FC = () => {
             <div className="text-sm font-bold text-slate-900">{activeCompany.accountManager}</div>
             <div className="text-[11px] text-slate-500">Responsable Grands Comptes Nyokah</div>
           </div>
+          {/* Ligne de la conciergerie : la fiche société ne porte pas de
+              numéro direct pour le chargé de compte. */}
           <div className="text-xs text-[#795900] flex items-center gap-1.5 font-semibold">
             <Phone className="w-3.5 h-3.5" />
-            <span>+225 07 08 09 10 11</span>
+            <span>+225 27 20 21 00 00</span>
           </div>
         </div>
 
@@ -233,7 +236,7 @@ export const CompanyPortal: React.FC = () => {
                 {filteredBookings.map((b) => (
                   <tr key={b.id} className="hover:bg-slate-50 transition-colors">
                     <td className="py-3 px-3 font-semibold text-slate-900">
-                      <div>{b.id}</div>
+                      <div>{b.reference}</div>
                       <div className="text-[10px] text-slate-500">{b.startDate}</div>
                     </td>
                     <td className="py-3 px-3">
@@ -284,7 +287,7 @@ export const CompanyPortal: React.FC = () => {
                     </td>
                     <td className="py-3 px-3 text-right">
                       <button
-                        onClick={() => handleDownloadInvoice(b.id)}
+                        onClick={() => handleDownloadInvoice(b.reference)}
                         className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors inline-flex items-center gap-1"
                         title="Télécharger la facture pro-forma"
                       >

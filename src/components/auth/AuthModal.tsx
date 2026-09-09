@@ -17,20 +17,65 @@ import {
   CreditCard,
   FileText
 } from 'lucide-react';
-import { UserAccount } from '../../types';
+interface DemoAccount {
+  label: string;
+  detail: string;
+  email: string;
+  password: string;
+  admin?: boolean;
+}
+
+/**
+ * Comptes installés par le seed de l'API (`npm run db:seed`).
+ * Ces boutons ne contournent pas l'authentification : ils pré-remplissent le
+ * formulaire et déclenchent une connexion réelle avec mot de passe.
+ */
+const DEMO_ACCOUNTS: DemoAccount[] = [
+  {
+    label: 'Direction Nyokah Mobility (Super-Admin)',
+    detail: 'Accès complet au back-office',
+    email: 'admin@nyokah.ci',
+    password: 'Nyokah@2026',
+    admin: true
+  },
+  {
+    label: 'Jean-Marc Kouassi',
+    detail: 'Particulier — Gold VIP',
+    email: 'jm.kouassi@gmail.com',
+    password: 'Nyokah@2026'
+  },
+  {
+    label: 'Aminata Touré',
+    detail: 'Orange Côte d’Ivoire (−20 %)',
+    email: 'a.toure@orange.ci',
+    password: 'Nyokah@2026'
+  },
+  {
+    label: 'M. Jean Dupont',
+    detail: 'Groupe SIFCA (−15 %)',
+    email: 'jean.dupont@sifca-ci.com',
+    password: 'Nyokah@2026'
+  },
+  {
+    label: 'Aïcha Diabaté',
+    detail: 'Particulier — Silver',
+    email: 'aicha.diabate@yahoo.fr',
+    password: 'Nyokah@2026'
+  }
+];
 
 export const AuthModal: React.FC = () => {
-  const { 
-    isAuthModalOpen, 
-    closeAuthModal, 
-    authModalTab, 
-    setAuthModalTab, 
-    login, 
-    loginAsUser, 
-    users, 
-    registerIndividual, 
-    registerCompany 
+  const {
+    isAuthModalOpen,
+    closeAuthModal,
+    authModalTab,
+    setAuthModalTab,
+    login,
+    registerIndividual,
+    registerCompany
   } = useApp();
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -57,39 +102,74 @@ export const AuthModal: React.FC = () => {
 
   if (!isAuthModalOpen) return null;
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginEmail.trim()) return;
-    login(loginEmail, loginPassword);
+    if (!loginEmail.trim() || !loginPassword) return;
+    setIsSubmitting(true);
+    try {
+      await login(loginEmail.trim(), loginPassword);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleIndRegisterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!indFullName.trim() || !indEmail.trim() || !indPhone.trim()) return;
-    registerIndividual({
-      fullName: indFullName,
-      email: indEmail,
-      phone: indPhone,
-      district: indDistrict,
-      city: 'Abidjan',
-      password: indPassword
-    });
+  /** Renseigne le formulaire avec un compte de démonstration et l'authentifie réellement. */
+  const handleDemoLogin = async (account: DemoAccount) => {
+    setLoginEmail(account.email);
+    setLoginPassword(account.password);
+    setIsSubmitting(true);
+    try {
+      await login(account.email, account.password);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleCompRegisterSubmit = (e: React.FormEvent) => {
+  const handleIndRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!compName.trim() || !compTradeRegister.trim() || !compContactName.trim() || !compEmail.trim()) return;
-    registerCompany({
-      companyName: compName,
-      tradeRegister: compTradeRegister,
-      contactName: compContactName,
-      companyRole: compRole,
-      contactEmail: compEmail,
-      contactPhone: compPhone,
-      billingAddress: compAddress,
-      creditLineRequested: compCreditLine,
-      password: compPassword
-    });
+    if (!indFullName.trim() || !indEmail.trim() || !indPhone.trim() || !indPassword) return;
+    setIsSubmitting(true);
+    try {
+      await registerIndividual({
+        fullName: indFullName,
+        email: indEmail,
+        phone: indPhone,
+        district: indDistrict,
+        city: 'Abidjan',
+        password: indPassword
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCompRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      !compName.trim() ||
+      !compTradeRegister.trim() ||
+      !compContactName.trim() ||
+      !compEmail.trim() ||
+      !compPassword
+    ) {
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await registerCompany({
+        companyName: compName,
+        tradeRegister: compTradeRegister,
+        contactName: compContactName,
+        companyRole: compRole,
+        contactEmail: compEmail,
+        contactPhone: compPhone,
+        billingAddress: compAddress,
+        creditLineRequested: compCreditLine,
+        password: compPassword
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const abidjanDistricts = [
@@ -198,16 +278,15 @@ export const AuthModal: React.FC = () => {
                   </span>
                 </div>
 
-                {/* PROMINENT ADMIN ACCESS BUTTON (Méthode 2) */}
-                {users.find((u) => u.type === 'admin') && (
+                {/* Compte administrateur du jeu de démonstration */}
+                {DEMO_ACCOUNTS.filter((a) => a.admin).map((account) => (
                   <button
+                    key={account.email}
                     type="button"
                     id="btn-quick-admin-login"
-                    onClick={() => {
-                      const admin = users.find((u) => u.type === 'admin');
-                      if (admin) loginAsUser(admin);
-                    }}
-                    className="w-full mb-3.5 p-3.5 bg-gradient-to-r from-[#0B132B] via-[#111C3D] to-[#1E293B] border-2 border-[#D4A017] rounded-2xl text-left text-white flex items-center justify-between shadow-lg transition-all hover:shadow-xl hover:border-amber-300 ring-2 ring-[#D4A017]/20 group cursor-pointer"
+                    disabled={isSubmitting}
+                    onClick={() => handleDemoLogin(account)}
+                    className="w-full mb-3.5 p-3.5 bg-gradient-to-r from-[#0B132B] via-[#111C3D] to-[#1E293B] border-2 border-[#D4A017] rounded-2xl text-left text-white flex items-center justify-between shadow-lg transition-all hover:shadow-xl hover:border-amber-300 ring-2 ring-[#D4A017]/20 group cursor-pointer disabled:opacity-60 disabled:cursor-wait"
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#D4A017] to-[#F5D061] text-[#0B132B] flex items-center justify-center shrink-0 shadow-md">
@@ -216,17 +295,17 @@ export const AuthModal: React.FC = () => {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs sm:text-sm font-extrabold text-white group-hover:text-[#D4A017] transition-colors truncate">
-                            Direction Nyokah Mobility (Super-Admin)
+                            {account.label}
                           </span>
                           <span className="text-[10px] bg-[#D4A017] text-[#0B132B] font-extrabold px-2 py-0.5 rounded-full shrink-0 shadow-xs">
                             Super-Admin
                           </span>
                         </div>
                         <p className="text-[11px] text-amber-200/90 font-mono truncate mt-0.5">
-                          admin@nyokah.ci
+                          {account.email}
                         </p>
                         <p className="text-[11px] text-slate-300 truncate mt-0.5">
-                          Un clic pour vous authentifier et basculer sur le Back-Office
+                          {account.detail}
                         </p>
                       </div>
                     </div>
@@ -234,38 +313,35 @@ export const AuthModal: React.FC = () => {
                       Accéder au Back-Office →
                     </span>
                   </button>
-                )}
+                ))}
 
-                {/* Client & Company test profiles */}
+                {/* Profils clients et entreprises du jeu de démonstration */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {users
-                    .filter((u) => u.type !== 'admin' && u.type !== 'driver')
-                    .slice(0, 4)
-                    .map((u) => (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => loginAsUser(u)}
-                        className="text-left p-2.5 bg-white border border-slate-200 hover:border-[#795900] hover:bg-[#F9F9FD] rounded-xl transition-all flex items-center gap-2.5 shadow-xs group cursor-pointer"
-                      >
-                        <img
-                          src={u.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'}
-                          alt={u.fullName}
-                          className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-900 truncate group-hover:text-[#795900]">
-                            {u.fullName}
-                          </p>
-                          <p className="text-[10px] text-slate-500 truncate">
-                            {u.type === 'company' 
-                              ? `${u.companyName} (-${u.negotiatedDiscountRate}%)`
-                              : `Particulier (${u.tier})`}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
+                  {DEMO_ACCOUNTS.filter((a) => !a.admin).map((account) => (
+                    <button
+                      key={account.email}
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => handleDemoLogin(account)}
+                      className="text-left p-2.5 bg-white border border-slate-200 hover:border-[#795900] hover:bg-[#F9F9FD] rounded-xl transition-all flex items-center gap-2.5 shadow-xs group cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#F3E5AB] text-[#795900] flex items-center justify-center shrink-0 text-xs font-bold border border-slate-200">
+                        {account.label.charAt(0)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-900 truncate group-hover:text-[#795900]">
+                          {account.label}
+                        </p>
+                        <p className="text-[10px] text-slate-500 truncate">{account.detail}</p>
+                      </div>
+                    </button>
+                  ))}
                 </div>
+
+                <p className="mt-3 text-[10px] text-slate-500 leading-relaxed">
+                  Ces raccourcis renseignent le formulaire et effectuent une véritable
+                  authentification auprès de l'API (mot de passe&nbsp;: <code>Nyokah@2026</code>).
+                </p>
               </div>
 
               <div className="relative flex py-1 items-center">
@@ -491,10 +567,11 @@ export const AuthModal: React.FC = () => {
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-3.5 px-6 rounded-2xl bg-[#795900] hover:bg-[#5c4300] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md transition-all"
+                  disabled={isSubmitting}
+                  className="w-full py-3.5 px-6 rounded-2xl bg-[#795900] hover:bg-[#5c4300] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-60 disabled:cursor-wait"
                 >
                   <CheckCircle2 className="w-4 h-4 text-[#F3E5AB]" />
-                  <span>Valider mon inscription Particulier</span>
+                  <span>{isSubmitting ? "Création du compte…" : "Valider mon inscription Particulier"}</span>
                 </button>
               </div>
 
@@ -688,10 +765,11 @@ export const AuthModal: React.FC = () => {
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-3.5 px-6 rounded-2xl bg-[#0B132B] hover:bg-[#1A264F] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md transition-all"
+                  disabled={isSubmitting}
+                  className="w-full py-3.5 px-6 rounded-2xl bg-[#0B132B] hover:bg-[#1A264F] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-60 disabled:cursor-wait"
                 >
                   <ShieldCheck className="w-4 h-4 text-[#D4A017]" />
-                  <span>Activer notre Compte Entreprise B2B</span>
+                  <span>{isSubmitting ? "Création du compte…" : "Activer notre Compte Entreprise B2B"}</span>
                 </button>
               </div>
             </form>
